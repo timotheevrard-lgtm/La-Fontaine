@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Scriptoria — Agent Narratif</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #1a1208;
+      --parchment: #f5efe4;
+      --parchment-dark: #ede3d0;
+      --gold: #c9922a;
+      --gold-light: #e8b84b;
+      --rust: #8b3a1a;
+      --sage: #4a5e45;
+      --mist: #8a8070;
+      --cream: #faf6ee;
+    }
+
+    body {
+      background: var(--parchment);
+      color: var(--ink);
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      padding: 3rem 2rem 2rem;
+      position: relative;
+      border-bottom: 1px solid rgba(201,146,42,0.3);
+    }
+
+    .logo-ornament {
+      font-size: 1.2rem;
+      color: var(--gold);
+      letter-spacing: 0.5em;
+      text-transform: uppercase;
+      font-family: 'DM Mono', monospace;
+      font-weight: 300;
+      opacity: 0.7;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.8rem, 6vw, 4.5rem);
+      font-weight: 700;
+      line-height: 1;
+      color: var(--ink);
+      margin: 0.3rem 0;
+      letter-spacing: -0.02em;
+    }
+
+    h1 em {
+      font-style: italic;
+      color: var(--gold);
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--mist);
+      font-style: italic;
+      margin-top: 0.4rem;
+      font-weight: 300;
+    }
+
+    /* ── Main layout ── */
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Panels ── */
+    .panel {
+      background: var(--cream);
+      border: 1px solid rgba(201,146,42,0.25);
+      border-radius: 2px;
+      padding: 2rem 2.5rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      box-shadow: 0 2px 20px rgba(26,18,8,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+    }
+
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 6px; left: 6px; right: 6px; bottom: 6px;
+      border: 1px solid rgba(201,146,42,0.1);
+      border-radius: 1px;
+      pointer-events: none;
+    }
+
+    .panel-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: var(--gold);
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .panel-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, rgba(201,146,42,0.3), transparent);
+    }
+
+    /* ── Inputs ── */
+    textarea, input[type="text"] {
+      width: 100%;
+      background: var(--parchment);
+      border: 1px solid rgba(201,146,42,0.3);
+      border-radius: 2px;
+      padding: 0.85rem 1rem;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1rem;
+      color: var(--ink);
+      resize: vertical;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      line-height: 1.6;
+    }
+
+    textarea:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(201,146,42,0.1);
+    }
+
+    textarea::placeholder, input::placeholder {
+      color: var(--mist);
+      font-style: italic;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 400;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.75rem 1.8rem;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      background: var(--ink);
+      color: var(--gold-light);
+      box-shadow: 0 2px 8px rgba(26,18,8,0.2);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #2d2010;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(26,18,8,0.25);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid rgba(201,146,42,0.4);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: rgba(201,146,42,0.08);
+      border-color: var(--gold);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.2rem;
+      flex-wrap: wrap;
+    }
+
+    /* ── Chapter controls ── */
+    #chapter-section { display: none; }
+
+    .chapter-mode-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.2rem;
+      border: 1px solid rgba(201,146,42,0.3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 0.6rem 1rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--mist);
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: var(--ink);
+      color: var(--gold-light);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── Log / Activity ── */
+    #log {
+      min-height: 120px;
+      max-height: 380px;
+      overflow-y: auto;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      padding: 0.5rem 0;
+    }
+
+    #log:empty::before {
+      content: 'En attente…';
+      color: var(--mist);
+      font-style: italic;
+      font-family: 'Cormorant Garamond', serif;
+    }
+
+    .log-entry {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.25rem 0;
+      border-bottom: 1px solid rgba(201,146,42,0.08);
+      animation: fadeSlide 0.3s ease;
+    }
+
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .log-icon { flex-shrink: 0; width: 1.2em; color: var(--gold); }
+    .log-text { color: var(--ink); flex: 1; }
+    .log-text.muted { color: var(--mist); }
+    .log-text.success { color: var(--sage); }
+    .log-text.error { color: var(--rust); }
+
+    /* ── Progress ── */
+    .progress-bar-wrap {
+      height: 3px;
+      background: rgba(201,146,42,0.15);
+      border-radius: 99px;
+      overflow: hidden;
+      margin: 1rem 0;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(to right, var(--gold), var(--gold-light));
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    .progress-bar.indeterminate {
+      width: 100%;
+      background: linear-gradient(90deg, transparent 0%, var(--gold) 50%, transparent 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    /* ── Chapter tracker ── */
+    #chapters-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .chapter-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.3rem 0.75rem;
+      background: var(--parchment-dark);
+      border: 1px solid rgba(201,146,42,0.3);
+      border-radius: 2px;
+      color: var(--mist);
+      animation: fadeSlide 0.4s ease;
+    }
+
+    .chapter-badge.done {
+      background: rgba(74,94,69,0.1);
+      border-color: var(--sage);
+      color: var(--sage);
+    }
+
+    .chapter-badge a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .chapter-badge a:hover { text-decoration: underline; }
+
+    /* ── Status indicator ── */
+    .status-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--mist);
+      margin-right: 0.4rem;
+      vertical-align: middle;
+    }
+
+    .status-dot.active {
+      background: var(--gold);
+      box-shadow: 0 0 6px rgba(201,146,42,0.6);
+      animation: pulse 1.5s infinite;
+    }
+
+    .status-dot.done { background: var(--sage); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── Notion link ── */
+    .notion-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--gold);
+      text-decoration: none;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      padding: 0.4rem 0.8rem;
+      border: 1px solid rgba(201,146,42,0.3);
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+
+    .notion-link:hover {
+      background: rgba(201,146,42,0.08);
+      border-color: var(--gold);
+    }
+
+    /* ── Ornaments ── */
+    .ornament {
+      text-align: center;
+      color: var(--gold);
+      opacity: 0.4;
+      font-size: 1.2rem;
+      letter-spacing: 0.5em;
+      margin: 0.5rem 0;
+    }
+
+    .session-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(201,146,42,0.2);
+    border-radius: 2px;
+    margin-bottom: 0.5rem;
+    background: var(--parchment);
+    animation: fadeSlide 0.3s ease;
+  }
+
+  .session-info { flex: 1; }
+  .session-title { font-family: 'Playfair Display', serif; font-size: 0.95rem; color: var(--ink); }
+  .session-meta { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--mist); margin-top: 0.2rem; }
+
+  #resume-panel { display: none; }
+    #log::-webkit-scrollbar { width: 4px; }
+    #log::-webkit-scrollbar-track { background: transparent; }
+    #log::-webkit-scrollbar-thumb { background: rgba(201,146,42,0.3); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-ornament">✦ &nbsp; Scriptoria &nbsp; ✦</div>
+  <h1><em>Story</em> Agent</h1>
+  <p class="subtitle">Claude × Notion — Roman génératif chapitre par chapitre</p>
+</header>
+
+<div class="container">
+
+  <!-- Resume Section -->
+  <div class="panel" id="resume-panel">
+    <div class="panel-title">✦ Reprendre une histoire</div>
+    <div id="sessions-list">
+      <p style="color:var(--mist); font-style:italic; font-size:0.95rem;">Chargement des sessions…</p>
+    </div>
+  </div>
+
+  <!-- Story Setup -->
+  <div class="panel" id="setup-panel">
+    <div class="panel-title">✦ Nouvelle Histoire</div>
+    <textarea id="story-brief" rows="4"
+      placeholder="Décris ton histoire… Genre, époque, personnages principaux, ton, thèmes. Ex: Un détective spatial enquête sur la disparition de planètes entières dans un empire galactique décadent. Style : noir, mélancolique, années 40 dans l'espace."></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-start" onclick="startStory()">
+        <span>✦</span> Commencer l'histoire
+      </button>
+    </div>
+  </div>
+
+  <!-- Chapter Section -->
+  <div class="panel" id="chapter-section">
+    <div class="panel-title">✦ Chapitres</div>
+
+    <div id="chapters-list"></div>
+    <div class="ornament" style="margin:1rem 0">· · ·</div>
+
+    <div class="chapter-mode-tabs">
+      <button class="tab active" onclick="switchTab('auto')">Automatique</button>
+      <button class="tab" onclick="switchTab('brief')">Avec brief</button>
+    </div>
+
+    <div class="tab-content active" id="tab-auto">
+      <p style="color:var(--mist); font-style:italic; font-size:0.95rem;">
+        L'agent continue l'histoire de façon cohérente, en tenant compte des chapitres précédents.
+      </p>
+    </div>
+
+    <div class="tab-content" id="tab-brief">
+      <input type="text" id="chapter-brief" placeholder="Brief pour le prochain chapitre… Ex: La rencontre avec l'antagoniste dans un casino orbital"/>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-chapter" onclick="nextChapter()">
+        <span>→</span> Écrire le prochain chapitre
+      </button>
+      <div id="notion-link-container"></div>
+    </div>
+  </div>
+
+  <!-- Activity Log -->
+  <div class="panel">
+    <div class="panel-title">✦ Activité
+      <span id="status-dot" class="status-dot"></span>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div id="log"></div>
+  </div>
+
+</div>
+
+<script>
+  async function loadSavedSessions() {
+    try {
+      const res = await fetch('/api/sessions');
+      const list = await res.json();
+      const panel = document.getElementById('resume-panel');
+      const container = document.getElementById('sessions-list');
+
+      if (list.length === 0) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      panel.style.display = 'block';
+      container.innerHTML = '';
+
+      for (const s of list) {
+        const date = s.createdAt ? new Date(s.createdAt).toLocaleDateString('fr-FR') : '';
+        const item = document.createElement('div');
+        item.className = 'session-item';
+        item.innerHTML = `
+          <div class="session-info">
+            <div class="session-title">${s.title}</div>
+            <div class="session-meta">${s.chapterCount - 1} chapitre(s) · ${date}</div>
+          </div>
+          <button class="btn btn-secondary" onclick="resumeSession('${s.sessionId}', '${s.title}', ${s.chapterCount})">→ Reprendre</button>
+        `;
+        container.appendChild(item);
+      }
+    } catch {}
+  }
+
+  async function resumeSession(id, title, chapterCount) {
+    sessionId = id;
+    document.getElementById('chapter-section').style.display = 'block';
+    document.getElementById('setup-panel').style.display = 'none';
+    document.getElementById('resume-panel').style.display = 'none';
+    document.getElementById('log').innerHTML = '';
+    addLog('✦', `Histoire reprise : "${title}" — ${chapterCount - 1} chapitre(s) existant(s)`,'success');
+  }
+
+  // Load sessions on page load
+  loadSavedSessions();
+
+
+  let chapterCount = 0;
+  let activeTab = 'auto';
+  let isRunning = false;
+
+  function switchTab(tab) {
+    activeTab = tab;
+    document.querySelectorAll('.tab').forEach((t,i) => {
+      t.classList.toggle('active', (i === 0 && tab === 'auto') || (i === 1 && tab === 'brief'));
+    });
+    document.getElementById('tab-auto').classList.toggle('active', tab === 'auto');
+    document.getElementById('tab-brief').classList.toggle('active', tab === 'brief');
+  }
+
+  function setRunning(running) {
+    isRunning = running;
+    document.getElementById('btn-start').disabled = running;
+    document.getElementById('btn-chapter').disabled = running;
+    const dot = document.getElementById('status-dot');
+    const bar = document.getElementById('progress-bar');
+    if (running) {
+      dot.className = 'status-dot active';
+      bar.className = 'progress-bar indeterminate';
+    } else {
+      dot.className = 'status-dot done';
+      bar.className = 'progress-bar';
+      bar.style.width = '100%';
+      setTimeout(() => { bar.style.width = '0%'; bar.className = 'progress-bar'; }, 1500);
+    }
+  }
+
+  function addLog(icon, text, cls = '') {
+    const log = document.getElementById('log');
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="log-icon">${icon}</span><span class="log-text ${cls}">${text}</span>`;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function addChapterBadge(num, title, url) {
+    const list = document.getElementById('chapters-list');
+    const badge = document.createElement('div');
+    badge.className = 'chapter-badge done';
+    badge.innerHTML = url
+      ? `<a href="${url}" target="_blank">Ch. ${num} — ${title}</a>`
+      : `Ch. ${num} — ${title}`;
+    list.appendChild(badge);
+  }
+
+  function toolLabel(name) {
+    const labels = {
+      setup_story_structure: '📐 Structure Notion',
+      create_chapter_page: '📝 Chapitre dans Notion',
+      add_character: '👤 Personnage dans Notion',
+    };
+    return labels[name] || name;
+  }
+
+  async function streamAgent(url, body) {
+    setRunning(true);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const event = JSON.parse(line.slice(6));
+          handleEvent(event);
+        } catch {}
+      }
+    }
+    setRunning(false);
+  }
+
+  function handleEvent(event) {
+    if (event.type === 'text' && event.text?.trim()) {
+      addLog('💬', event.text.slice(0, 120) + (event.text.length > 120 ? '…' : ''), 'muted');
+    } else if (event.type === 'tool') {
+      addLog('⚙️', `Appel : ${toolLabel(event.name)}`);
+    } else if (event.type === 'tool_result') {
+      const r = event.result;
+      if (r.success) {
+        addLog('✓', r.message, 'success');
+        if (event.name === 'create_chapter_page') {
+          chapterCount++;
+          const input = event.result;
+          addChapterBadge(chapterCount, '', r.chapterUrl || '');
+          // Update last badge title from log
+        }
+        if (event.name === 'setup_story_structure' && r.mainPageId) {
+          showNotionLink(r.message);
+        }
+      }
+    } else if (event.type === 'tool_error') {
+      addLog('✗', `Erreur ${event.name} : ${event.error}`, 'error');
+    } else if (event.type === 'session') {
+      sessionId = event.sessionId;
+      document.getElementById('chapter-section').style.display = 'block';
+    } else if (event.type === 'error') {
+      addLog('✗', event.message, 'error');
+    } else if (event.type === 'done') {
+      addLog('✦', 'Terminé.', 'success');
+    }
+  }
+
+  function showNotionLink(msg) {
+    // Extract URL from message if present (Notion returns page URL)
+    const container = document.getElementById('notion-link-container');
+    container.innerHTML = `<a class="notion-link" href="https://notion.so" target="_blank">↗ Ouvrir Notion</a>`;
+  }
+
+  async function startStory() {
+    const brief = document.getElementById('story-brief').value.trim();
+    if (!brief) return;
+    document.getElementById('log').innerHTML = '';
+    addLog('✦', 'Démarrage de l\'agent…');
+    await streamAgent('/api/start', { storyBrief: brief });
+  }
+
+  async function nextChapter() {
+    if (!sessionId) return;
+    const brief = activeTab === 'brief'
+      ? document.getElementById('chapter-brief').value.trim()
+      : null;
+    addLog('→', brief ? `Chapitre avec brief : "${brief}"` : 'Prochain chapitre automatique…');
+    await streamAgent('/api/chapter', { sessionId, brief });
+    if (activeTab === 'brief') document.getElementById('chapter-brief').value = '';
+  }
+</script>
+</body>
+</html>

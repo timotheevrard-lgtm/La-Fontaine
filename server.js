@@ -468,8 +468,10 @@ app.post("/api/start", async (req, res) => {
   let notionContext = "";
   if (notionPageUrl) {
     try {
-      const pageId = notionPageUrl.split("-").pop().split("?")[0].replace(/\//g, "");
-      const pageContent = await readNotionPageContent(pageId);
+const urlParts = notionPageUrl.split("-");
+const pageId = urlParts[urlParts.length - 1].split("?")[0].replace(/\//g, "");
+console.log('URL reçue:', notionPageUrl);
+console.log('ID extrait:', pageId);      const pageContent = await readNotionPageContent(pageId);
       notionContext = `\n\nL'utilisateur a préparé une page Notion avec son univers et ses personnages. UTILISE CES ÉLÉMENTS comme base pour l'histoire :\n\n${pageContent}`;
     } catch (e) {
       console.log("Impossible de lire la page Notion:", e.message);

@@ -239,6 +239,7 @@ async function readNotionPageContent(pageId) {
 
   // Get page blocks (content)
   const blocks = await notionRequest(`/blocks/${pageId}/children`);
+  console.log('BLOCS TROUVÉS:', JSON.stringify(blocks.results?.map(b => b.type)));
   
   let content = `# ${title}\n\n`;
   

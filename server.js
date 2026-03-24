@@ -230,6 +230,62 @@ async function addCharacter({ charactersDbId, name, role, description, traits })
   };
 }
 
+async function readNotionPageContent(pageId) {
+  // Get page properties
+  const page = await notionRequest(`/pages/${pageId}`);
+  const title = page.properties?.title?.title?.[0]?.text?.content || 
+                page.properties?.Name?.title?.[0]?.text?.content || "Page sans titre";
+
+  // Get page blocks (content)
+  const blocks = await notionRequest(`/blocks/${pageId}/children`);
+  
+  let content = `# ${title}\n\n`;
+  
+  for (const block of blocks.results || []) {
+    if (block.type === "paragraph") {
+      const text = block.paragraph?.rich_text?.map(r => r.text?.content).join("") || "";
+      if (text) content += text + "\n\n";
+    } else if (block.type === "heading_1") {
+      const text = block.heading_1?.rich_text?.map(r => r.text?.content).join("") || "";
+      if (text) content += `# ${text}\n\n`;
+    } else if (block.type === "heading_2") {
+      const text = block.heading_2?.rich_text?.map(r => r.text?.content).join("") || "";
+      if (text) content += `## ${text}\n\n`;
+    } else if (block.type === "heading_3") {
+      const text = block.heading_3?.rich_text?.map(r => r.text?.content).join("") || "";
+      if (text) content += `### ${text}\n\n`;
+    } else if (block.type === "bulleted_list_item") {
+      const text = block.bulleted_list_item?.rich_text?.map(r => r.text?.content).join("") || "";
+      if (text) content += `- ${text}\n`;
+    } else if (block.type === "callout") {
+      const text = block.callout?.rich_text?.map(r => r.text?.content).join("") || "";
+      if (text) content += `> ${text}\n\n`;
+    } else if (block.type === "child_database") {
+      // Read child databases (like character databases)
+      const dbTitle = block.child_database?.title || "Base de données";
+      content += `## ${dbTitle}\n\n`;
+      const dbContent = await notionRequest(`/databases/${block.id}/query`, "POST", {});
+      for (const item of dbContent.results || []) {
+        const name = Object.values(item.properties).find(p => p.type === "title")?.title?.[0]?.text?.content || "";
+        if (name) {
+          content += `### ${name}\n`;
+          for (const [key, prop] of Object.entries(item.properties)) {
+            if (prop.type === "rich_text" && prop.rich_text?.length > 0) {
+              const val = prop.rich_text.map(r => r.text?.content).join("");
+              if (val) content += `**${key}** : ${val}\n`;
+            } else if (prop.type === "select" && prop.select) {
+              content += `**${key}** : ${prop.select.name}\n`;
+            }
+          }
+          content += "\n";
+        }
+      }
+    }
+  }
+
+  return content.slice(0, 8000); // Limit to avoid token overflow
+}
+
 async function readChaptersFromNotion(chaptersDbId) {
   const db = await notionRequest(`/databases/${chaptersDbId}/query`, "POST", {
     sorts: [{ property: "Numéro", direction: "ascending" }],
@@ -404,13 +460,25 @@ app.post("/api/resume", async (req, res) => {
 });
 
 app.post("/api/start", async (req, res) => {
-  const { storyBrief } = req.body;
+  const { storyBrief, notionPageUrl } = req.body;
   const sessionId = Date.now().toString();
+
+  // Extract Notion page ID from URL if provided
+  let notionContext = "";
+  if (notionPageUrl) {
+    try {
+      const pageId = notionPageUrl.split("-").pop().split("?")[0].replace(/\//g, "");
+      const pageContent = await readNotionPageContent(pageId);
+      notionContext = `\n\nL'utilisateur a préparé une page Notion avec son univers et ses personnages. UTILISE CES ÉLÉMENTS comme base pour l'histoire :\n\n${pageContent}`;
+    } catch (e) {
+      console.log("Impossible de lire la page Notion:", e.message);
+    }
+  }
 
   const messages = [
     {
       role: "user",
-      content: `Nouvelle histoire : ${storyBrief}. 
+      content: `Nouvelle histoire : ${storyBrief}.${notionContext}
 Commence par créer la structure Notion, ajoute les personnages principaux, puis écris le Chapitre 1 complet et détaillé.`,
     },
   ];

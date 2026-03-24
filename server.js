@@ -231,11 +231,12 @@ async function addCharacter({ charactersDbId, name, role, description, traits })
 }
 
 async function readNotionPageContent(pageId) {
-  // Get page properties
-  const page = await notionRequest(`/pages/${pageId}`);
-  console.log('PAGE LUE:', JSON.stringify(page).slice(0, 200));
-  const title = page.properties?.title?.title?.[0]?.text?.content || 
-                page.properties?.Name?.title?.[0]?.text?.content || "Page sans titre";
+  try {
+    console.log('DÉBUT LECTURE PAGE:', pageId);
+    const page = await notionRequest(`/pages/${pageId}`);
+    console.log('PAGE OK');
+    const blocks = await notionRequest(`/blocks/${pageId}/children`);
+    console.log('BLOCS:', blocks.results?.map(b => b.type));
 
   // Get page blocks (content)
   const blocks = await notionRequest(`/blocks/${pageId}/children`);

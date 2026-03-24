@@ -161,6 +161,33 @@ async function setupStoryStructure({ storyTitle, storyDescription, genre }) {
 }
 
 async function createChapterPage({ chaptersDbId, chapterNumber, chapterTitle, summary, content }) {
+  const allBlocks = [
+    {
+      object: "block",
+      type: "callout",
+      callout: {
+        rich_text: [{ text: { content: summary } }],
+        icon: { emoji: "📝" },
+        color: "gray_background",
+      },
+    },
+    { object: "block", type: "divider", divider: {} },
+    ...content
+      .split("\n\n")
+      .filter((p) => p.trim())
+      .flatMap((paragraph) => {
+        const chunks = [];
+        for (let i = 0; i < paragraph.length; i += 1900) {
+          chunks.push(paragraph.slice(i, i + 1900));
+        }
+        return chunks.map((chunk) => ({
+          object: "block",
+          type: "paragraph",
+          paragraph: { rich_text: [{ text: { content: chunk } }] },
+        }));
+      }),
+  ];
+
   const chapterEntry = await notionRequest("/pages", "POST", {
     parent: { database_id: chaptersDbId },
     properties: {
@@ -169,33 +196,14 @@ async function createChapterPage({ chaptersDbId, chapterNumber, chapterTitle, su
       Statut: { select: { name: "Rédigé" } },
       Résumé: { rich_text: [{ text: { content: summary } }] },
     },
-    children: [
-      {
-        object: "block",
-        type: "callout",
-        callout: {
-          rich_text: [{ text: { content: summary } }],
-          icon: { emoji: "📝" },
-          color: "gray_background",
-        },
-      },
-      { object: "block", type: "divider", divider: {} },
-      ...content
-        .split("\n\n")
-        .filter((p) => p.trim())
-        .flatMap((paragraph) => {
-          const chunks = [];
-          for (let i = 0; i < paragraph.length; i += 1900) {
-            chunks.push(paragraph.slice(i, i + 1900));
-          }
-          return chunks.map((chunk) => ({
-            object: "block",
-            type: "paragraph",
-            paragraph: { rich_text: [{ text: { content: chunk } }] },
-          }));
-        }),
-    ],
+    children: allBlocks.slice(0, 100),
   });
+
+  for (let i = 100; i < allBlocks.length; i += 100) {
+    await notionRequest(`/blocks/${chapterEntry.id}/children`, "PATCH", {
+      children: allBlocks.slice(i, i + 100),
+    });
+  }
 
   return {
     success: true,

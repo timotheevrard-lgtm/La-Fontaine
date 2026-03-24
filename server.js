@@ -232,61 +232,84 @@ async function addCharacter({ charactersDbId, name, role, description, traits })
 
 async function readNotionPageContent(pageId) {
   try {
-    console.log('DÉBUT LECTURE PAGE:', pageId);
+    console.log('LECTURE PAGE NOTION:', pageId);
     const page = await notionRequest(`/pages/${pageId}`);
-    console.log('PAGE OK');
-    const blocks = await notionRequest(`/blocks/${pageId}/children`);
-    console.log('BLOCS:', blocks.results?.map(b => b.type));
+    const title = page.properties?.title?.title?.[0]?.text?.content ||
+                  page.properties?.Name?.title?.[0]?.text?.content || "Page sans titre";
+    console.log('TITRE PAGE:', title);
 
-  // Get page blocks (content)
-  const blocks = await notionRequest(`/blocks/${pageId}/children`);
-  console.log('BLOCS TROUVÉS:', JSON.stringify(blocks.results?.map(b => b.type)));
-  
-  let content = `# ${title}\n\n`;
-  
-  for (const block of blocks.results || []) {
-    if (block.type === "paragraph") {
-      const text = block.paragraph?.rich_text?.map(r => r.text?.content).join("") || "";
-      if (text) content += text + "\n\n";
-    } else if (block.type === "heading_1") {
-      const text = block.heading_1?.rich_text?.map(r => r.text?.content).join("") || "";
-      if (text) content += `# ${text}\n\n`;
-    } else if (block.type === "heading_2") {
-      const text = block.heading_2?.rich_text?.map(r => r.text?.content).join("") || "";
-      if (text) content += `## ${text}\n\n`;
-    } else if (block.type === "heading_3") {
-      const text = block.heading_3?.rich_text?.map(r => r.text?.content).join("") || "";
-      if (text) content += `### ${text}\n\n`;
-    } else if (block.type === "bulleted_list_item") {
-      const text = block.bulleted_list_item?.rich_text?.map(r => r.text?.content).join("") || "";
-      if (text) content += `- ${text}\n`;
-    } else if (block.type === "callout") {
-      const text = block.callout?.rich_text?.map(r => r.text?.content).join("") || "";
-      if (text) content += `> ${text}\n\n`;
-    } else if (block.type === "child_database") {
-      // Read child databases (like character databases)
-      const dbTitle = block.child_database?.title || "Base de données";
-      content += `## ${dbTitle}\n\n`;
-      const dbContent = await notionRequest(`/databases/${block.id}/query`, "POST", {});
-      for (const item of dbContent.results || []) {
-        const name = Object.values(item.properties).find(p => p.type === "title")?.title?.[0]?.text?.content || "";
-        if (name) {
-          content += `### ${name}\n`;
-          for (const [key, prop] of Object.entries(item.properties)) {
-            if (prop.type === "rich_text" && prop.rich_text?.length > 0) {
-              const val = prop.rich_text.map(r => r.text?.content).join("");
-              if (val) content += `**${key}** : ${val}\n`;
-            } else if (prop.type === "select" && prop.select) {
-              content += `**${key}** : ${prop.select.name}\n`;
-            }
+    const blocksData = await notionRequest(`/blocks/${pageId}/children`);
+    console.log('TYPES DE BLOCS:', blocksData.results?.map(b => b.type));
+
+    let content = `# ${title}\n\n`;
+
+    for (const block of blocksData.results || []) {
+      if (block.type === "paragraph") {
+        const text = block.paragraph?.rich_text?.map(r => r.text?.content).join("") || "";
+        if (text) content += text + "\n\n";
+      } else if (block.type === "heading_1") {
+        const text = block.heading_1?.rich_text?.map(r => r.text?.content).join("") || "";
+        if (text) content += `# ${text}\n\n`;
+      } else if (block.type === "heading_2") {
+        const text = block.heading_2?.rich_text?.map(r => r.text?.content).join("") || "";
+        if (text) content += `## ${text}\n\n`;
+      } else if (block.type === "heading_3") {
+        const text = block.heading_3?.rich_text?.map(r => r.text?.content).join("") || "";
+        if (text) content += `### ${text}\n\n`;
+      } else if (block.type === "bulleted_list_item") {
+        const text = block.bulleted_list_item?.rich_text?.map(r => r.text?.content).join("") || "";
+        if (text) content += `- ${text}\n`;
+      } else if (block.type === "callout") {
+        const text = block.callout?.rich_text?.map(r => r.text?.content).join("") || "";
+        if (text) content += `> ${text}\n\n`;
+      } else if (block.type === "child_page") {
+        // Read child pages recursively
+        const subPageTitle = block.child_page?.title || "Sous-page";
+        content += `## ${subPageTitle}\n\n`;
+        const subBlocks = await notionRequest(`/blocks/${block.id}/children`);
+        for (const subBlock of subBlocks.results || []) {
+          if (subBlock.type === "paragraph") {
+            const text = subBlock.paragraph?.rich_text?.map(r => r.text?.content).join("") || "";
+            if (text) content += text + "\n\n";
+          } else if (subBlock.type === "heading_1" || subBlock.type === "heading_2" || subBlock.type === "heading_3") {
+            const text = subBlock[subBlock.type]?.rich_text?.map(r => r.text?.content).join("") || "";
+            if (text) content += `### ${text}\n\n`;
+          } else if (subBlock.type === "bulleted_list_item") {
+            const text = subBlock.bulleted_list_item?.rich_text?.map(r => r.text?.content).join("") || "";
+            if (text) content += `- ${text}\n`;
+          } else if (subBlock.type === "callout") {
+            const text = subBlock.callout?.rich_text?.map(r => r.text?.content).join("") || "";
+            if (text) content += `> ${text}\n\n`;
           }
-          content += "\n";
+        }
+      } else if (block.type === "child_database") {
+        const dbTitle = block.child_database?.title || "Base de données";
+        content += `## ${dbTitle}\n\n`;
+        const dbContent = await notionRequest(`/databases/${block.id}/query`, "POST", {});
+        for (const item of dbContent.results || []) {
+          const name = Object.values(item.properties).find(p => p.type === "title")?.title?.[0]?.text?.content || "";
+          if (name) {
+            content += `### ${name}\n`;
+            for (const [key, prop] of Object.entries(item.properties)) {
+              if (prop.type === "rich_text" && prop.rich_text?.length > 0) {
+                const val = prop.rich_text.map(r => r.text?.content).join("");
+                if (val) content += `**${key}** : ${val}\n`;
+              } else if (prop.type === "select" && prop.select) {
+                content += `**${key}** : ${prop.select.name}\n`;
+              }
+            }
+            content += "\n";
+          }
         }
       }
     }
-  }
 
-  return content.slice(0, 8000); // Limit to avoid token overflow
+    console.log('CONTENU EXTRAIT (500 premiers chars):', content.slice(0, 500));
+    return content.slice(0, 8000);
+  } catch (e) {
+    console.error('ERREUR LECTURE PAGE:', e.message);
+    return "";
+  }
 }
 
 async function readChaptersFromNotion(chaptersDbId) {
@@ -470,10 +493,8 @@ app.post("/api/start", async (req, res) => {
   let notionContext = "";
   if (notionPageUrl) {
     try {
-const urlParts = notionPageUrl.split("-");
-const pageId = urlParts[urlParts.length - 1].split("?")[0].replace(/\//g, "");
-console.log('URL reçue:', notionPageUrl);
-console.log('ID extrait:', pageId);      const pageContent = await readNotionPageContent(pageId);
+      const pageId = notionPageUrl.split("-").pop().split("?")[0].replace(/\//g, "");
+      const pageContent = await readNotionPageContent(pageId);
       notionContext = `\n\nL'utilisateur a préparé une page Notion avec son univers et ses personnages. UTILISE CES ÉLÉMENTS comme base pour l'histoire :\n\n${pageContent}`;
     } catch (e) {
       console.log("Impossible de lire la page Notion:", e.message);

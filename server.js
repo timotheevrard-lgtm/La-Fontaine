@@ -285,17 +285,17 @@ async function readNotionPageContent(pageId) {
         const dbTitle = block.child_database?.title || "Base de données";
         content += `## ${dbTitle}\n\n`;
 
-        // Filter by "Actif" checkbox if it's a character database
-        const dbContent = await notionRequest(`/databases/${block.id}/query`, "POST", {
-          filter: {
-            property: "Actif",
-            checkbox: { equals: true }
-          }
+        // Get all characters and filter by "Actif" checkbox in JS
+        const dbContent = await notionRequest(`/databases/${block.id}/query`, "POST", {});
+
+        const activeItems = (dbContent.results || []).filter(item => {
+          const actifProp = item.properties?.["Actif"];
+          return actifProp?.checkbox === true;
         });
 
-        console.log(`BASE "${dbTitle}" — ${dbContent.results?.length || 0} entrée(s) active(s)`);
+        console.log(`BASE "${dbTitle}" — ${activeItems.length} entrée(s) active(s) sur ${dbContent.results?.length || 0}`);
 
-        for (const item of dbContent.results || []) {
+        for (const item of activeItems) {
           const name = Object.values(item.properties).find(p => p.type === "title")?.title?.[0]?.text?.content || "";
           if (!name) continue;
 

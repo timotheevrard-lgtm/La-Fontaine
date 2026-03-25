@@ -230,6 +230,27 @@ async function addCharacter({ charactersDbId, name, role, description, traits })
   };
 }
 
+async function readBlockContent(blockId) {
+  const data = await notionRequest(`/blocks/${blockId}/children`);
+  let content = "";
+  for (const block of data.results || []) {
+    if (block.type === "paragraph") {
+      const text = block.paragraph?.rich_text?.map(r => r.text?.content).join("") || "";
+      if (text) content += text + "\n\n";
+    } else if (["heading_1", "heading_2", "heading_3"].includes(block.type)) {
+      const text = block[block.type]?.rich_text?.map(r => r.text?.content).join("") || "";
+      if (text) content += `### ${text}\n\n`;
+    } else if (block.type === "bulleted_list_item") {
+      const text = block.bulleted_list_item?.rich_text?.map(r => r.text?.content).join("") || "";
+      if (text) content += `- ${text}\n`;
+    } else if (block.type === "callout") {
+      const text = block.callout?.rich_text?.map(r => r.text?.content).join("") || "";
+      if (text) content += `> ${text}\n\n`;
+    }
+  }
+  return content;
+}
+
 async function readNotionPageContent(pageId) {
   try {
     console.log('LECTURE PAGE NOTION:', pageId);
@@ -247,15 +268,9 @@ async function readNotionPageContent(pageId) {
       if (block.type === "paragraph") {
         const text = block.paragraph?.rich_text?.map(r => r.text?.content).join("") || "";
         if (text) content += text + "\n\n";
-      } else if (block.type === "heading_1") {
-        const text = block.heading_1?.rich_text?.map(r => r.text?.content).join("") || "";
-        if (text) content += `# ${text}\n\n`;
-      } else if (block.type === "heading_2") {
-        const text = block.heading_2?.rich_text?.map(r => r.text?.content).join("") || "";
+      } else if (["heading_1", "heading_2", "heading_3"].includes(block.type)) {
+        const text = block[block.type]?.rich_text?.map(r => r.text?.content).join("") || "";
         if (text) content += `## ${text}\n\n`;
-      } else if (block.type === "heading_3") {
-        const text = block.heading_3?.rich_text?.map(r => r.text?.content).join("") || "";
-        if (text) content += `### ${text}\n\n`;
       } else if (block.type === "bulleted_list_item") {
         const text = block.bulleted_list_item?.rich_text?.map(r => r.text?.content).join("") || "";
         if (text) content += `- ${text}\n`;
@@ -263,49 +278,59 @@ async function readNotionPageContent(pageId) {
         const text = block.callout?.rich_text?.map(r => r.text?.content).join("") || "";
         if (text) content += `> ${text}\n\n`;
       } else if (block.type === "child_page") {
-        // Read child pages recursively
         const subPageTitle = block.child_page?.title || "Sous-page";
         content += `## ${subPageTitle}\n\n`;
-        const subBlocks = await notionRequest(`/blocks/${block.id}/children`);
-        for (const subBlock of subBlocks.results || []) {
-          if (subBlock.type === "paragraph") {
-            const text = subBlock.paragraph?.rich_text?.map(r => r.text?.content).join("") || "";
-            if (text) content += text + "\n\n";
-          } else if (subBlock.type === "heading_1" || subBlock.type === "heading_2" || subBlock.type === "heading_3") {
-            const text = subBlock[subBlock.type]?.rich_text?.map(r => r.text?.content).join("") || "";
-            if (text) content += `### ${text}\n\n`;
-          } else if (subBlock.type === "bulleted_list_item") {
-            const text = subBlock.bulleted_list_item?.rich_text?.map(r => r.text?.content).join("") || "";
-            if (text) content += `- ${text}\n`;
-          } else if (subBlock.type === "callout") {
-            const text = subBlock.callout?.rich_text?.map(r => r.text?.content).join("") || "";
-            if (text) content += `> ${text}\n\n`;
-          }
-        }
+        content += await readBlockContent(block.id);
       } else if (block.type === "child_database") {
         const dbTitle = block.child_database?.title || "Base de données";
         content += `## ${dbTitle}\n\n`;
-        const dbContent = await notionRequest(`/databases/${block.id}/query`, "POST", {});
+
+        // Filter by "Actif" checkbox if it's a character database
+        const dbContent = await notionRequest(`/databases/${block.id}/query`, "POST", {
+          filter: {
+            property: "Actif",
+            checkbox: { equals: true }
+          }
+        });
+
+        console.log(`BASE "${dbTitle}" — ${dbContent.results?.length || 0} entrée(s) active(s)`);
+
         for (const item of dbContent.results || []) {
           const name = Object.values(item.properties).find(p => p.type === "title")?.title?.[0]?.text?.content || "";
-          if (name) {
-            content += `### ${name}\n`;
-            for (const [key, prop] of Object.entries(item.properties)) {
-              if (prop.type === "rich_text" && prop.rich_text?.length > 0) {
-                const val = prop.rich_text.map(r => r.text?.content).join("");
-                if (val) content += `**${key}** : ${val}\n`;
-              } else if (prop.type === "select" && prop.select) {
-                content += `**${key}** : ${prop.select.name}\n`;
-              }
+          if (!name) continue;
+
+          content += `### ${name}\n`;
+
+          // Read basic properties
+          for (const [key, prop] of Object.entries(item.properties)) {
+            if (key === "Actif") continue;
+            if (prop.type === "rich_text" && prop.rich_text?.length > 0) {
+              const val = prop.rich_text.map(r => r.text?.content).join("");
+              if (val) content += `**${key}** : ${val}\n`;
+            } else if (prop.type === "select" && prop.select) {
+              content += `**${key}** : ${prop.select.name}\n`;
+            } else if (prop.type === "checkbox") {
+              // skip
             }
-            content += "\n";
           }
+
+          // Read the character's subpage content
+          const itemBlocks = await notionRequest(`/blocks/${item.id}/children`);
+          for (const b of itemBlocks.results || []) {
+            if (b.type === "child_page") {
+              content += await readBlockContent(b.id);
+            } else if (b.type === "paragraph") {
+              const text = b.paragraph?.rich_text?.map(r => r.text?.content).join("") || "";
+              if (text) content += text + "\n";
+            }
+          }
+          content += "\n";
         }
       }
     }
 
-    console.log('CONTENU EXTRAIT (500 premiers chars):', content.slice(0, 500));
-    return content.slice(0, 8000);
+    console.log('CONTENU EXTRAIT (800 premiers chars):', content.slice(0, 800));
+    return content.slice(0, 12000);
   } catch (e) {
     console.error('ERREUR LECTURE PAGE:', e.message);
     return "";

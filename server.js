@@ -329,7 +329,7 @@ async function readNotionPageContent(pageId) {
       }
     }
 
-    console.log('CONTENU EXTRAIT (800 premiers chars):', content.slice(0, 800));
+    console.log('CONTENU EXTRAIT COMPLET:\n', content);
     return content.slice(0, 12000);
   } catch (e) {
     console.error('ERREUR LECTURE PAGE:', e.message);

@@ -510,6 +510,12 @@ app.post("/api/resume", async (req, res) => {
   });
 });
 
+app.delete("/api/sessions/:sessionId", async (req, res) => {
+  const { sessionId } = req.params;
+  await sessionsCollection.deleteOne({ sessionId });
+  res.json({ success: true });
+});
+
 app.post("/api/start", async (req, res) => {
   const { storyBrief, notionPageUrl } = req.body;
   const sessionId = Date.now().toString();

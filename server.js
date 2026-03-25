@@ -330,7 +330,7 @@ async function readNotionPageContent(pageId) {
     }
 
 console.log('CONTENU EXTRAIT COMPLET:\n', content);
-    return content.slice(0, 12000);
+    return content.slice(0, 30000);
   } catch (e) {
     console.error('ERREUR LECTURE PAGE:', e.message);
     return "";

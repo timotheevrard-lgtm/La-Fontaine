@@ -230,6 +230,14 @@ async function addCharacter({ charactersDbId, name, role, description, traits })
   };
 }
 
+function extractNotionId(url) {
+  // Handle direct UUIDs
+  if (/^[a-f0-9]{32}$/.test(url)) return url;
+  // Handle URLs like https://www.notion.so/Title-32chars or with ?v= params
+  const match = url.match(/([a-f0-9]{32})/);
+  return match ? match[1] : null;
+}
+
 async function readBlockContent(blockId) {
   const data = await notionRequest(`/blocks/${blockId}/children`);
   let content = "";
@@ -535,7 +543,7 @@ app.post("/api/start", async (req, res) => {
   let notionContext = "";
   if (notionPageUrl) {
     try {
-      const pageId = notionPageUrl.split("-").pop().split("?")[0].replace(/\//g, "");
+      const pageId = extractNotionId(notionPageUrl);
       const pageContent = await readNotionPageContent(pageId);
       notionContext = `\n\nL'utilisateur a préparé une page Notion avec son univers et ses personnages. UTILISE CES ÉLÉMENTS comme base pour l'histoire :\n\n${pageContent}`;
     } catch (e) {
@@ -613,8 +621,7 @@ app.post("/api/chapter", async (req, res) => {
   let existingChapterContext = "";
   if (existingChapterUrl) {
     try {
-      const urlParts = existingChapterUrl.split("-");
-      const pageId = urlParts[urlParts.length - 1].split("?")[0].replace(/\//g, "");
+      const pageId = extractNotionId(existingChapterUrl);
       const chapterContent = await readBlockContent(pageId);
       existingChapterContext = `\n\nL'utilisateur a écrit ou fourni le chapitre suivant — continue l'histoire EN PARTANT de ce chapitre, en respectant exactement son contenu, son style et ses événements :\n\n${chapterContent.slice(0, 8000)}`;
     } catch (e) {
@@ -732,8 +739,7 @@ app.post("/api/illustrations", async (req, res) => {
 
   try {
     // Extract page ID from URL
-    const urlParts = chapterUrl.split("-");
-    const pageId = urlParts[urlParts.length - 1].split("?")[0].replace(/\//g, "");
+    const pageId = extractNotionId(chapterUrl);
 
     // Read chapter content
     const chapterContent = await readBlockContent(pageId);

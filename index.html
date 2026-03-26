@@ -561,6 +561,17 @@
     </div>
   </div>
 
+  <!-- Chapter Management Panel -->
+  <div class="panel" id="chapter-management-panel" style="display:none;">
+    <div class="panel-title">✦ Gérer les chapitres</div>
+    <div id="chapter-management-list">
+      <p style="color:var(--mist); font-style:italic; font-size:0.95rem;">Chargement des chapitres…</p>
+    </div>
+    <div style="margin-top:0.75rem;">
+      <button class="btn btn-secondary" onclick="loadChapterList()" style="font-size:0.72rem;">↺ Rafraîchir</button>
+    </div>
+  </div>
+
   <!-- Illustration Panel -->
   <div class="panel" id="illustration-panel">
     <div class="panel-title">✦ Générer des Illustrations</div>
@@ -662,10 +673,64 @@
     sessionId = id;
     document.getElementById('chapter-section').style.display = 'block';
     document.getElementById('reorganize-panel').style.display = 'block';
+    document.getElementById('chapter-management-panel').style.display = 'block';
     document.getElementById('setup-panel').style.display = 'none';
     document.getElementById('resume-panel').style.display = 'none';
     document.getElementById('log').innerHTML = '';
     addLog('✦', `Histoire reprise — ${chapterCount - 1} chapitre(s) existant(s)`, 'success');
+    loadChapterList();
+  }
+
+  async function loadChapterList() {
+    if (!sessionId) return;
+    const container = document.getElementById('chapter-management-list');
+    container.innerHTML = '<p style="color:var(--mist); font-style:italic; font-size:0.95rem;">Chargement…</p>';
+
+    try {
+      const res = await fetch('/api/chapters/' + sessionId);
+      const data = await res.json();
+
+      if (!data.chapters || data.chapters.length === 0) {
+        container.innerHTML = '<p style="color:var(--mist); font-style:italic; font-size:0.95rem;">Aucun chapitre trouvé.</p>';
+        return;
+      }
+
+      container.innerHTML = '';
+      for (const ch of data.chapters) {
+        const item = document.createElement('div');
+        item.className = 'session-item';
+        item.id = `chapter-item-${ch.id}`;
+        item.innerHTML = `
+          <div class="session-info">
+            <div class="session-title">Ch. ${ch.num} — ${ch.title}</div>
+            <div class="session-meta">${ch.summary || ''}</div>
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            ${ch.url ? `<a class="notion-link" href="${ch.url}" target="_blank" style="font-size:0.65rem; padding:0.3rem 0.6rem;">↗</a>` : ''}
+            <button class="btn btn-secondary" style="color:var(--rust); border-color:var(--rust); padding:0.4rem 0.75rem; font-size:0.7rem;" onclick="deleteChapter('${ch.id}', ${ch.num}, '${ch.title.replace(/'/g, "\\'")}')">✕</button>
+          </div>
+        `;
+        container.appendChild(item);
+      }
+    } catch (err) {
+      container.innerHTML = `<p style="color:var(--rust);">Erreur : ${err.message}</p>`;
+    }
+  }
+
+  async function deleteChapter(pageId, num, title) {
+    if (!confirm(`Supprimer le chapitre ${num} "${title}" de Notion ?`)) return;
+    try {
+      const res = await fetch('/api/chapters/' + pageId, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        addLog('✕', `Chapitre ${num} supprimé.`, 'success');
+        document.getElementById('chapter-item-' + pageId)?.remove();
+      } else {
+        addLog('✗', data.error || 'Erreur lors de la suppression.', 'error');
+      }
+    } catch (err) {
+      addLog('✗', err.message, 'error');
+    }
   }
 
   async function generateIllustrations() {
@@ -852,9 +917,8 @@
         addLog('✓', r.message, 'success');
         if (event.name === 'create_chapter_page') {
           chapterCount++;
-          const input = event.result;
           addChapterBadge(chapterCount, '', r.chapterUrl || '');
-          // Update last badge title from log
+          loadChapterList();
         }
         if (event.name === 'setup_story_structure' && r.mainPageId) {
           showNotionLink(r.message);
@@ -866,6 +930,8 @@
       sessionId = event.sessionId;
       document.getElementById('chapter-section').style.display = 'block';
       document.getElementById('reorganize-panel').style.display = 'block';
+      document.getElementById('chapter-management-panel').style.display = 'block';
+      loadChapterList();
     } else if (event.type === 'error') {
       addLog('✗', event.message, 'error');
     } else if (event.type === 'done') {

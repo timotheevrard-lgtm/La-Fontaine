@@ -783,6 +783,40 @@ Réponds UNIQUEMENT en JSON valide, sans markdown, sans backticks :
   }
 });
 
+app.get("/api/chapters/:sessionId", async (req, res) => {
+  const { sessionId } = req.params;
+  const session = await loadSession(sessionId);
+  if (!session || !session.chaptersDbId) return res.json({ chapters: [] });
+
+  try {
+    const dbContent = await notionRequest(`/databases/${session.chaptersDbId}/query`, "POST", {
+      sorts: [{ property: "Numéro", direction: "ascending" }]
+    });
+
+    const chapters = (dbContent.results || []).map(page => ({
+      id: page.id,
+      num: page.properties?.Numéro?.number,
+      title: page.properties?.Titre?.title?.[0]?.text?.content || "Sans titre",
+      summary: page.properties?.Résumé?.rich_text?.[0]?.text?.content || "",
+      url: page.url
+    }));
+
+    res.json({ chapters });
+  } catch (err) {
+    res.json({ chapters: [], error: err.message });
+  }
+});
+
+app.delete("/api/chapters/:pageId", async (req, res) => {
+  const { pageId } = req.params;
+  try {
+    await notionRequest(`/pages/${pageId}`, "PATCH", { archived: true });
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 app.post("/api/reorder-chapter", async (req, res) => {
   const { sessionId, from, to } = req.body;
   const session = await loadSession(sessionId);

@@ -645,16 +645,32 @@
         item.innerHTML = `
           <div class="session-info">
             <div class="session-title">${s.title}</div>
-            <div class="session-meta">${s.chapterCount - 1} chapitre(s) · ${date}</div>
+            <div class="session-meta" id="meta-${safeId}">${s.chapterCount - 1} chapitre(s) · ${date}</div>
           </div>
           <div style="display:flex; gap:0.5rem;">
             <button class="btn btn-secondary" onclick="resumeSession('${safeId}', ${chapterCount})">→ Reprendre</button>
+            <button class="btn btn-secondary" title="Synchroniser le compteur avec Notion" onclick="syncChapters('${safeId}')">↺</button>
             <button class="btn btn-secondary" style="color:var(--rust); border-color:var(--rust);" onclick="deleteSession('${safeId}')">✕</button>
           </div>
         `;
         container.appendChild(item);
       }
     } catch {}
+  }
+
+  async function syncChapters(id) {
+    try {
+      const res = await fetch('/api/sync-chapters/' + id, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        const meta = document.getElementById('meta-' + id);
+        if (meta) meta.textContent = `${data.chapterCount} chapitre(s) · synchronisé ✓`;
+      } else {
+        alert('Erreur : ' + (data.error || 'Synchronisation impossible'));
+      }
+    } catch (err) {
+      alert('Erreur : ' + err.message);
+    }
   }
 
   async function deleteSession(id) {

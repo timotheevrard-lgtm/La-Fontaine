@@ -845,7 +845,7 @@ Le nouveau chapitre doit faire le lien naturel entre ces deux chapitres.` : ''}`
   res.end();
 });
 
-
+app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 

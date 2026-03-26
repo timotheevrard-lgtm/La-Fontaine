@@ -727,6 +727,62 @@ app.post("/api/delete-last-chapter", async (req, res) => {
   res.end();
 });
 
+app.post("/api/illustrations", async (req, res) => {
+  const { chapterUrl, types } = req.body;
+
+  try {
+    // Extract page ID from URL
+    const urlParts = chapterUrl.split("-");
+    const pageId = urlParts[urlParts.length - 1].split("?")[0].replace(/\//g, "");
+
+    // Read chapter content
+    const chapterContent = await readBlockContent(pageId);
+    if (!chapterContent) return res.json({ error: "Impossible de lire le chapitre" });
+
+    // Generate prompts with Claude
+    const typeInstructions = [];
+    if (types.includes('scenes')) typeInstructions.push("3 scènes clés du chapitre");
+    if (types.includes('portraits')) typeInstructions.push("2 portraits de personnages présents dans le chapitre");
+    if (types.includes('ambiances')) typeInstructions.push("2 ambiances ou lieux décrits dans le chapitre");
+
+    const response = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 2000,
+      messages: [{
+        role: "user",
+        content: `Tu es un expert en génération de prompts pour Leonardo AI. 
+        
+Lis ce chapitre et génère des prompts d'illustration optimisés pour Leonardo AI.
+
+CHAPITRE :
+${chapterContent.slice(0, 6000)}
+
+Génère exactement : ${typeInstructions.join(", ")}.
+
+L'univers est une dystopie industrielle sombre (style Blade Runner / Dark Souls). Ambiance : éclairage au Thorium (lueurs bleutées/orangées), mines profondes, métal et béton, atmosphère oppressive.
+
+Réponds UNIQUEMENT en JSON valide, sans markdown, sans backticks :
+{
+  "prompts": [
+    {
+      "type": "Scène clé / Portrait / Ambiance",
+      "description": "Description courte en français de ce qui est illustré",
+      "prompt": "Le prompt en anglais optimisé pour Leonardo AI, très détaillé, avec style artistique"
+    }
+  ]
+}`
+      }]
+    });
+
+    const text = response.content[0].text.trim();
+    const parsed = JSON.parse(text);
+    res.json(parsed);
+  } catch (err) {
+    console.error("Erreur illustrations:", err.message);
+    res.json({ error: err.message });
+  }
+});
+
 app.post("/api/reorder-chapter", async (req, res) => {
   const { sessionId, from, to } = req.body;
   const session = await loadSession(sessionId);

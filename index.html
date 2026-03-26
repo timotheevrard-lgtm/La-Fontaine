@@ -665,6 +665,8 @@
       if (data.success) {
         const meta = document.getElementById('meta-' + id);
         if (meta) meta.textContent = `${data.chapterCount} chapitre(s) · synchronisé ✓`;
+        // Reload sessions to update the Reprendre button with correct count
+        await loadSavedSessions();
       } else {
         alert('Erreur : ' + (data.error || 'Synchronisation impossible'));
       }

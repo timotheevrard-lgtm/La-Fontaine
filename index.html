@@ -407,7 +407,46 @@
   .session-title { font-family: 'Playfair Display', serif; font-size: 0.95rem; color: var(--ink); }
   .session-meta { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--mist); margin-top: 0.2rem; }
 
-  #resume-panel { display: none; }
+  .illus-card {
+    background: var(--parchment);
+    border: 1px solid rgba(201,146,42,0.2);
+    border-radius: 2px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    animation: fadeSlide 0.3s ease;
+  }
+
+  .illus-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.4rem;
+  }
+
+  .illus-prompt {
+    font-size: 0.9rem;
+    color: var(--ink);
+    line-height: 1.6;
+    font-style: italic;
+  }
+
+  .illus-copy {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--mist);
+    cursor: pointer;
+    margin-top: 0.5rem;
+    display: inline-block;
+    border: none;
+    background: none;
+    padding: 0;
+  }
+
+  .illus-copy:hover { color: var(--gold); }
+
+  #illustration-panel { display: block; }
     #log::-webkit-scrollbar { width: 4px; }
     #log::-webkit-scrollbar-track { background: transparent; }
     #log::-webkit-scrollbar-thumb { background: rgba(201,146,42,0.3); border-radius: 2px; }
@@ -522,6 +561,40 @@
     </div>
   </div>
 
+  <!-- Illustration Panel -->
+  <div class="panel" id="illustration-panel">
+    <div class="panel-title">✦ Générer des Illustrations</div>
+    <p style="color:var(--mist); font-style:italic; font-size:0.95rem; margin-bottom:1rem;">
+      L'agent lit un chapitre Notion et génère des prompts optimisés pour Leonardo AI.
+    </p>
+
+    <div style="margin-bottom:1rem;">
+      <div class="panel-title" style="font-size:0.85rem; margin-bottom:0.6rem;">✦ URL du chapitre Notion</div>
+      <input type="text" id="illustration-chapter-url" placeholder="Colle ici l'URL du chapitre Notion à illustrer…"/>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+      <div class="panel-title" style="font-size:0.85rem; margin-bottom:0.6rem;">✦ Type d'illustrations</div>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <label style="display:flex; align-items:center; gap:0.4rem; font-family:'DM Mono',monospace; font-size:0.75rem; cursor:pointer;">
+          <input type="checkbox" id="illus-scenes" checked> Scènes clés
+        </label>
+        <label style="display:flex; align-items:center; gap:0.4rem; font-family:'DM Mono',monospace; font-size:0.75rem; cursor:pointer;">
+          <input type="checkbox" id="illus-portraits" checked> Portraits
+        </label>
+        <label style="display:flex; align-items:center; gap:0.4rem; font-family:'DM Mono',monospace; font-size:0.75rem; cursor:pointer;">
+          <input type="checkbox" id="illus-ambiances" checked> Ambiances & Lieux
+        </label>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="generateIllustrations()">
+      <span>🎨</span> Générer les prompts
+    </button>
+
+    <div id="illustration-results" style="margin-top:1.5rem;"></div>
+  </div>
+
   <!-- Activity Log -->
   <div class="panel">
     <div class="panel-title">✦ Activité
@@ -595,7 +668,53 @@
     addLog('✦', `Histoire reprise — ${chapterCount - 1} chapitre(s) existant(s)`, 'success');
   }
 
-  async function reorderChapter() {
+  async function generateIllustrations() {
+    const chapterUrl = document.getElementById('illustration-chapter-url').value.trim();
+    if (!chapterUrl) return;
+
+    const types = [];
+    if (document.getElementById('illus-scenes').checked) types.push('scenes');
+    if (document.getElementById('illus-portraits').checked) types.push('portraits');
+    if (document.getElementById('illus-ambiances').checked) types.push('ambiances');
+
+    const results = document.getElementById('illustration-results');
+    results.innerHTML = '<p style="color:var(--mist); font-style:italic;">Génération en cours…</p>';
+
+    try {
+      const res = await fetch('/api/illustrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chapterUrl, types })
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        results.innerHTML = `<p style="color:var(--rust);">Erreur : ${data.error}</p>`;
+        return;
+      }
+
+      results.innerHTML = '';
+      for (const prompt of data.prompts) {
+        const card = document.createElement('div');
+        card.className = 'illus-card';
+        card.innerHTML = `
+          <div class="illus-type">${prompt.type}</div>
+          <div class="illus-prompt">${prompt.description}</div>
+          <div style="margin-top:0.5rem; padding:0.5rem; background:var(--parchment-dark); border-radius:2px; font-family:'DM Mono',monospace; font-size:0.72rem; color:var(--ink); line-height:1.5;">${prompt.prompt}</div>
+          <button class="illus-copy" onclick="copyPrompt(this, '${prompt.prompt.replace(/'/g, "\\'")}')">↗ Copier le prompt</button>
+        `;
+        results.appendChild(card);
+      }
+    } catch (err) {
+      results.innerHTML = `<p style="color:var(--rust);">Erreur : ${err.message}</p>`;
+    }
+  }
+
+  function copyPrompt(btn, text) {
+    navigator.clipboard.writeText(text);
+    btn.textContent = '✓ Copié !';
+    setTimeout(() => btn.textContent = '↗ Copier le prompt', 2000);
+  }
     if (!sessionId) return;
     const from = parseInt(document.getElementById('move-from').value);
     const to = parseInt(document.getElementById('move-to').value);

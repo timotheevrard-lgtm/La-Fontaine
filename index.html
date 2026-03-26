@@ -715,6 +715,8 @@
     btn.textContent = '✓ Copié !';
     setTimeout(() => btn.textContent = '↗ Copier le prompt', 2000);
   }
+
+  async function reorderChapter() {
     if (!sessionId) return;
     const from = parseInt(document.getElementById('move-from').value);
     const to = parseInt(document.getElementById('move-to').value);

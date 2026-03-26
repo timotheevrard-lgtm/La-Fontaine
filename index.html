@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
@@ -9,414 +8,410 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-```
-:root {
-  --ink: #1a1208;
-  --parchment: #f5efe4;
-  --parchment-dark: #ede3d0;
-  --gold: #c9922a;
-  --gold-light: #e8b84b;
-  --rust: #8b3a1a;
-  --sage: #4a5e45;
-  --mist: #8a8070;
-  --cream: #faf6ee;
-}
+    :root {
+      --ink: #1a1208;
+      --parchment: #f5efe4;
+      --parchment-dark: #ede3d0;
+      --gold: #c9922a;
+      --gold-light: #e8b84b;
+      --rust: #8b3a1a;
+      --sage: #4a5e45;
+      --mist: #8a8070;
+      --cream: #faf6ee;
+    }
 
-body {
-  background: var(--parchment);
-  color: var(--ink);
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
+    body {
+      background: var(--parchment);
+      color: var(--ink);
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-/* Texture overlay */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-}
+    /* Texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
 
-/* ── Header ── */
-header {
-  text-align: center;
-  padding: 3rem 2rem 2rem;
-  position: relative;
-  border-bottom: 1px solid rgba(201,146,42,0.3);
-}
+    /* ── Header ── */
+    header {
+      text-align: center;
+      padding: 3rem 2rem 2rem;
+      position: relative;
+      border-bottom: 1px solid rgba(201,146,42,0.3);
+    }
 
-.logo-ornament {
-  font-size: 1.2rem;
-  color: var(--gold);
-  letter-spacing: 0.5em;
-  text-transform: uppercase;
-  font-family: 'DM Mono', monospace;
-  font-weight: 300;
-  opacity: 0.7;
-}
+    .logo-ornament {
+      font-size: 1.2rem;
+      color: var(--gold);
+      letter-spacing: 0.5em;
+      text-transform: uppercase;
+      font-family: 'DM Mono', monospace;
+      font-weight: 300;
+      opacity: 0.7;
+    }
 
-h1 {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(2.8rem, 6vw, 4.5rem);
-  font-weight: 700;
-  line-height: 1;
-  color: var(--ink);
-  margin: 0.3rem 0;
-  letter-spacing: -0.02em;
-}
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.8rem, 6vw, 4.5rem);
+      font-weight: 700;
+      line-height: 1;
+      color: var(--ink);
+      margin: 0.3rem 0;
+      letter-spacing: -0.02em;
+    }
 
-h1 em {
-  font-style: italic;
-  color: var(--gold);
-}
+    h1 em {
+      font-style: italic;
+      color: var(--gold);
+    }
 
-.subtitle {
-  font-size: 1.05rem;
-  color: var(--mist);
-  font-style: italic;
-  margin-top: 0.4rem;
-  font-weight: 300;
-}
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--mist);
+      font-style: italic;
+      margin-top: 0.4rem;
+      font-weight: 300;
+    }
 
-/* ── Main layout ── */
-.container {
-  max-width: 920px;
-  margin: 0 auto;
-  padding: 2.5rem 1.5rem 4rem;
-  position: relative;
-  z-index: 1;
-}
+    /* ── Main layout ── */
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+      position: relative;
+      z-index: 1;
+    }
 
-/* ── Panels ── */
-.panel {
-  background: var(--cream);
-  border: 1px solid rgba(201,146,42,0.25);
-  border-radius: 2px;
-  padding: 2rem 2.5rem;
-  margin-bottom: 1.5rem;
-  position: relative;
-  box-shadow: 0 2px 20px rgba(26,18,8,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
-}
+    /* ── Panels ── */
+    .panel {
+      background: var(--cream);
+      border: 1px solid rgba(201,146,42,0.25);
+      border-radius: 2px;
+      padding: 2rem 2.5rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      box-shadow: 0 2px 20px rgba(26,18,8,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+    }
 
-.panel::before {
-  content: '';
-  position: absolute;
-  top: 6px; left: 6px; right: 6px; bottom: 6px;
-  border: 1px solid rgba(201,146,42,0.1);
-  border-radius: 1px;
-  pointer-events: none;
-}
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 6px; left: 6px; right: 6px; bottom: 6px;
+      border: 1px solid rgba(201,146,42,0.1);
+      border-radius: 1px;
+      pointer-events: none;
+    }
 
-.panel-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.1rem;
-  font-weight: 400;
-  color: var(--gold);
-  margin-bottom: 1.2rem;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
+    .panel-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: var(--gold);
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
 
-.panel-title::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(to right, rgba(201,146,42,0.3), transparent);
-}
+    .panel-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, rgba(201,146,42,0.3), transparent);
+    }
 
-/* ── Inputs ── */
-textarea, input[type="text"] {
-  width: 100%;
-  background: var(--parchment);
-  border: 1px solid rgba(201,146,42,0.3);
-  border-radius: 2px;
-  padding: 0.85rem 1rem;
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 1rem;
-  color: var(--ink);
-  resize: vertical;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  line-height: 1.6;
-}
+    /* ── Inputs ── */
+    textarea, input[type="text"] {
+      width: 100%;
+      background: var(--parchment);
+      border: 1px solid rgba(201,146,42,0.3);
+      border-radius: 2px;
+      padding: 0.85rem 1rem;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1rem;
+      color: var(--ink);
+      resize: vertical;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      line-height: 1.6;
+    }
 
-textarea:focus, input[type="text"]:focus {
-  outline: none;
-  border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(201,146,42,0.1);
-}
+    textarea:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(201,146,42,0.1);
+    }
 
-textarea::placeholder, input::placeholder {
-  color: var(--mist);
-  font-style: italic;
-}
+    textarea::placeholder, input::placeholder {
+      color: var(--mist);
+      font-style: italic;
+    }
 
-/* ── Buttons ── */
-.btn {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.75rem;
-  font-weight: 400;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  padding: 0.75rem 1.8rem;
-  border: none;
-  border-radius: 2px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
+    /* ── Buttons ── */
+    .btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 400;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.75rem 1.8rem;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
 
-.btn-primary {
-  background: var(--ink);
-  color: var(--gold-light);
-  box-shadow: 0 2px 8px rgba(26,18,8,0.2);
-}
+    .btn-primary {
+      background: var(--ink);
+      color: var(--gold-light);
+      box-shadow: 0 2px 8px rgba(26,18,8,0.2);
+    }
 
-.btn-primary:hover:not(:disabled) {
-  background: #2d2010;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(26,18,8,0.25);
-}
+    .btn-primary:hover:not(:disabled) {
+      background: #2d2010;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(26,18,8,0.25);
+    }
 
-.btn-secondary {
-  background: transparent;
-  color: var(--ink);
-  border: 1px solid rgba(201,146,42,0.4);
-}
+    .btn-secondary {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid rgba(201,146,42,0.4);
+    }
 
-.btn-secondary:hover:not(:disabled) {
-  background: rgba(201,146,42,0.08);
-  border-color: var(--gold);
-}
+    .btn-secondary:hover:not(:disabled) {
+      background: rgba(201,146,42,0.08);
+      border-color: var(--gold);
+    }
 
-.btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none !important;
-}
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none !important;
+    }
 
-.btn-row {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1.2rem;
-  flex-wrap: wrap;
-}
+    .btn-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.2rem;
+      flex-wrap: wrap;
+    }
 
-/* ── Chapter controls ── */
-#chapter-section { display: none; }
+    /* ── Chapter controls ── */
+    #chapter-section { display: none; }
 
-.chapter-mode-tabs {
-  display: flex;
-  gap: 0;
-  margin-bottom: 1.2rem;
-  border: 1px solid rgba(201,146,42,0.3);
-  border-radius: 2px;
-  overflow: hidden;
-}
+    .chapter-mode-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.2rem;
+      border: 1px solid rgba(201,146,42,0.3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
 
-.tab {
-  flex: 1;
-  padding: 0.6rem 1rem;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--mist);
-  transition: all 0.2s;
-}
+    .tab {
+      flex: 1;
+      padding: 0.6rem 1rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--mist);
+      transition: all 0.2s;
+    }
 
-.tab.active {
-  background: var(--ink);
-  color: var(--gold-light);
-}
+    .tab.active {
+      background: var(--ink);
+      color: var(--gold-light);
+    }
 
-.tab-content { display: none; }
-.tab-content.active { display: block; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
-/* ── Log / Activity ── */
-#log {
-  min-height: 120px;
-  max-height: 380px;
-  overflow-y: auto;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.78rem;
-  line-height: 1.7;
-  padding: 0.5rem 0;
-}
+    /* ── Log / Activity ── */
+    #log {
+      min-height: 120px;
+      max-height: 380px;
+      overflow-y: auto;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      padding: 0.5rem 0;
+    }
 
-#log:empty::before {
-  content: 'En attente…';
-  color: var(--mist);
-  font-style: italic;
-  font-family: 'Cormorant Garamond', serif;
-}
+    #log:empty::before {
+      content: 'En attente…';
+      color: var(--mist);
+      font-style: italic;
+      font-family: 'Cormorant Garamond', serif;
+    }
 
-.log-entry {
-  display: flex;
-  gap: 0.75rem;
-  padding: 0.25rem 0;
-  border-bottom: 1px solid rgba(201,146,42,0.08);
-  animation: fadeSlide 0.3s ease;
-}
+    .log-entry {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.25rem 0;
+      border-bottom: 1px solid rgba(201,146,42,0.08);
+      animation: fadeSlide 0.3s ease;
+    }
 
-@keyframes fadeSlide {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
-.log-icon { flex-shrink: 0; width: 1.2em; color: var(--gold); }
-.log-text { color: var(--ink); flex: 1; }
-.log-text.muted { color: var(--mist); }
-.log-text.success { color: var(--sage); }
-.log-text.error { color: var(--rust); }
+    .log-icon { flex-shrink: 0; width: 1.2em; color: var(--gold); }
+    .log-text { color: var(--ink); flex: 1; }
+    .log-text.muted { color: var(--mist); }
+    .log-text.success { color: var(--sage); }
+    .log-text.error { color: var(--rust); }
 
-/* ── Progress ── */
-.progress-bar-wrap {
-  height: 3px;
-  background: rgba(201,146,42,0.15);
-  border-radius: 99px;
-  overflow: hidden;
-  margin: 1rem 0;
-}
+    /* ── Progress ── */
+    .progress-bar-wrap {
+      height: 3px;
+      background: rgba(201,146,42,0.15);
+      border-radius: 99px;
+      overflow: hidden;
+      margin: 1rem 0;
+    }
 
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(to right, var(--gold), var(--gold-light));
-  border-radius: 99px;
-  width: 0%;
-  transition: width 0.4s ease;
-}
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(to right, var(--gold), var(--gold-light));
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
 
-.progress-bar.indeterminate {
-  width: 100%;
-  background: linear-gradient(90deg, transparent 0%, var(--gold) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
+    .progress-bar.indeterminate {
+      width: 100%;
+      background: linear-gradient(90deg, transparent 0%, var(--gold) 50%, transparent 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
 
-/* ── Chapter tracker ── */
-#chapters-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
+    /* ── Chapter tracker ── */
+    #chapters-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
 
-.chapter-badge {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.7rem;
-  padding: 0.3rem 0.75rem;
-  background: var(--parchment-dark);
-  border: 1px solid rgba(201,146,42,0.3);
-  border-radius: 2px;
-  color: var(--mist);
-  animation: fadeSlide 0.4s ease;
-}
+    .chapter-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.3rem 0.75rem;
+      background: var(--parchment-dark);
+      border: 1px solid rgba(201,146,42,0.3);
+      border-radius: 2px;
+      color: var(--mist);
+      animation: fadeSlide 0.4s ease;
+    }
 
-.chapter-badge.done {
-  background: rgba(74,94,69,0.1);
-  border-color: var(--sage);
-  color: var(--sage);
-}
+    .chapter-badge.done {
+      background: rgba(74,94,69,0.1);
+      border-color: var(--sage);
+      color: var(--sage);
+    }
 
-.chapter-badge a {
-  color: inherit;
-  text-decoration: none;
-}
+    .chapter-badge a {
+      color: inherit;
+      text-decoration: none;
+    }
 
-.chapter-badge a:hover { text-decoration: underline; }
+    .chapter-badge a:hover { text-decoration: underline; }
 
-/* ── Status indicator ── */
-.status-dot {
-  display: inline-block;
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--mist);
-  margin-right: 0.4rem;
-  vertical-align: middle;
-}
+    /* ── Status indicator ── */
+    .status-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--mist);
+      margin-right: 0.4rem;
+      vertical-align: middle;
+    }
 
-.status-dot.active {
-  background: var(--gold);
-  box-shadow: 0 0 6px rgba(201,146,42,0.6);
-  animation: pulse 1.5s infinite;
-}
+    .status-dot.active {
+      background: var(--gold);
+      box-shadow: 0 0 6px rgba(201,146,42,0.6);
+      animation: pulse 1.5s infinite;
+    }
 
-.status-dot.done { background: var(--sage); }
+    .status-dot.done { background: var(--sage); }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
 
-/* ── Notion link ── */
-.notion-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--gold);
-  text-decoration: none;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  padding: 0.4rem 0.8rem;
-  border: 1px solid rgba(201,146,42,0.3);
-  border-radius: 2px;
-  transition: all 0.2s;
-}
+    /* ── Notion link ── */
+    .notion-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--gold);
+      text-decoration: none;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      padding: 0.4rem 0.8rem;
+      border: 1px solid rgba(201,146,42,0.3);
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
 
-.notion-link:hover {
-  background: rgba(201,146,42,0.08);
-  border-color: var(--gold);
-}
+    .notion-link:hover {
+      background: rgba(201,146,42,0.08);
+      border-color: var(--gold);
+    }
 
-/* ── Ornaments ── */
-.ornament {
-  text-align: center;
-  color: var(--gold);
-  opacity: 0.4;
-  font-size: 1.2rem;
-  letter-spacing: 0.5em;
-  margin: 0.5rem 0;
-}
+    /* ── Ornaments ── */
+    .ornament {
+      text-align: center;
+      color: var(--gold);
+      opacity: 0.4;
+      font-size: 1.2rem;
+      letter-spacing: 0.5em;
+      margin: 0.5rem 0;
+    }
 
-.session-item {
-display: flex;
-align-items: center;
-justify-content: space-between;
-padding: 0.75rem 1rem;
-border: 1px solid rgba(201,146,42,0.2);
-border-radius: 2px;
-margin-bottom: 0.5rem;
-background: var(--parchment);
-animation: fadeSlide 0.3s ease;
-```
+    .session-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(201,146,42,0.2);
+    border-radius: 2px;
+    margin-bottom: 0.5rem;
+    background: var(--parchment);
+    animation: fadeSlide 0.3s ease;
+  }
 
-}
+  .session-info { flex: 1; }
+  .session-title { font-family: 'Playfair Display', serif; font-size: 0.95rem; color: var(--ink); }
+  .session-meta { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--mist); margin-top: 0.2rem; }
 
-.session-info { flex: 1; }
-.session-title { font-family: ‘Playfair Display’, serif; font-size: 0.95rem; color: var(–ink); }
-.session-meta { font-family: ‘DM Mono’, monospace; font-size: 0.7rem; color: var(–mist); margin-top: 0.2rem; }
-
-#resume-panel { display: none; }
-#log::-webkit-scrollbar { width: 4px; }
-#log::-webkit-scrollbar-track { background: transparent; }
-#log::-webkit-scrollbar-thumb { background: rgba(201,146,42,0.3); border-radius: 2px; }
-</style>
-
+  #resume-panel { display: none; }
+    #log::-webkit-scrollbar { width: 4px; }
+    #log::-webkit-scrollbar-track { background: transparent; }
+    #log::-webkit-scrollbar-thumb { background: rgba(201,146,42,0.3); border-radius: 2px; }
+  </style>
 </head>
 <body>
 
@@ -429,7 +424,6 @@ animation: fadeSlide 0.3s ease;
 <div class="container">
 
   <!-- Resume Section -->
-
   <div class="panel" id="resume-panel">
     <div class="panel-title">✦ Reprendre une histoire</div>
     <div id="sessions-list">
@@ -438,110 +432,97 @@ animation: fadeSlide 0.3s ease;
   </div>
 
   <!-- Story Setup -->
-
   <div class="panel" id="setup-panel">
     <div class="panel-title">✦ Nouvelle Histoire</div>
     <textarea id="story-brief" rows="4"
       placeholder="Décris ton histoire… Genre, époque, personnages principaux, ton, thèmes. Ex: Un détective spatial enquête sur la disparition de planètes entières dans un empire galactique décadent. Style : noir, mélancolique, années 40 dans l'espace."></textarea>
-
-```
-<div style="margin-top:1rem;">
-  <div class="panel-title" style="font-size:0.85rem; margin-bottom:0.6rem;">✦ Page Notion existante (optionnel)</div>
-  <input type="text" id="notion-page-url" placeholder="Colle ici l'URL de ta page Notion avec tes personnages/univers…"/>
-</div>
-<div class="btn-row">
-  <button class="btn btn-primary" id="btn-start" onclick="startStory()">
-    <span>✦</span> Commencer l'histoire
-  </button>
-</div>
-```
-
+    
+    <div style="margin-top:1rem;">
+      <div class="panel-title" style="font-size:0.85rem; margin-bottom:0.6rem;">✦ Page Notion existante (optionnel)</div>
+      <input type="text" id="notion-page-url" placeholder="Colle ici l'URL de ta page Notion avec tes personnages/univers…"/>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-start" onclick="startStory()">
+        <span>✦</span> Commencer l'histoire
+      </button>
+    </div>
   </div>
 
   <!-- Chapter Section -->
-
   <div class="panel" id="chapter-section">
     <div class="panel-title">✦ Chapitres</div>
 
-```
-<div id="chapters-list"></div>
-<div class="ornament" style="margin:1rem 0">· · ·</div>
+    <div id="chapters-list"></div>
+    <div class="ornament" style="margin:1rem 0">· · ·</div>
 
-<div class="chapter-mode-tabs">
-  <button class="tab active" onclick="switchTab('auto')">Automatique</button>
-  <button class="tab" onclick="switchTab('brief')">Avec brief</button>
-</div>
+    <div class="chapter-mode-tabs">
+      <button class="tab active" onclick="switchTab('auto')">Automatique</button>
+      <button class="tab" onclick="switchTab('brief')">Avec brief</button>
+    </div>
 
-<div class="tab-content active" id="tab-auto">
-  <p style="color:var(--mist); font-style:italic; font-size:0.95rem;">
-    L'agent continue l'histoire de façon cohérente, en tenant compte des chapitres précédents.
-  </p>
-</div>
+    <div class="tab-content active" id="tab-auto">
+      <p style="color:var(--mist); font-style:italic; font-size:0.95rem;">
+        L'agent continue l'histoire de façon cohérente, en tenant compte des chapitres précédents.
+      </p>
+    </div>
 
-<div class="tab-content" id="tab-brief">
-  <input type="text" id="chapter-brief" placeholder="Brief pour le prochain chapitre… Ex: La rencontre avec l'antagoniste dans un casino orbital"/>
-</div>
+    <div class="tab-content" id="tab-brief">
+      <input type="text" id="chapter-brief" placeholder="Brief pour le prochain chapitre… Ex: La rencontre avec l'antagoniste dans un casino orbital"/>
+    </div>
 
-<div style="margin-top:1rem;">
-  <div class="panel-title" style="font-size:0.85rem; margin-bottom:0.6rem;">✦ Corrections à prendre en compte</div>
-  <input type="text" id="chapter-corrections" placeholder="Ex: Kael est brun et non blond. Mira a 40 ans. La mine est sur la planète Kerath…"/>
-</div>
+    <div style="margin-top:1rem;">
+      <div class="panel-title" style="font-size:0.85rem; margin-bottom:0.6rem;">✦ Corrections à prendre en compte</div>
+      <input type="text" id="chapter-corrections" placeholder="Ex: Kael est brun et non blond. Mira a 40 ans. La mine est sur la planète Kerath…"/>
+    </div>
 
-<div style="margin-top:1rem;">
-  <div class="panel-title" style="font-size:0.85rem; margin-bottom:0.6rem;">✦ Reprendre à partir d'un chapitre existant (optionnel)</div>
-  <input type="text" id="existing-chapter-url" placeholder="Colle ici l'URL d'un chapitre Notion existant (écrit manuellement ou par l'agent)…"/>
-</div>
+    <div style="margin-top:1rem;">
+      <div class="panel-title" style="font-size:0.85rem; margin-bottom:0.6rem;">✦ Reprendre à partir d'un chapitre existant (optionnel)</div>
+      <input type="text" id="existing-chapter-url" placeholder="Colle ici l'URL d'un chapitre Notion existant (écrit manuellement ou par l'agent)…"/>
+    </div>
 
-<div class="btn-row">
-  <button class="btn btn-primary" id="btn-chapter" onclick="nextChapter()">
-    <span>→</span> Écrire le prochain chapitre
-  </button>
-  <button class="btn btn-secondary" id="btn-delete-chapter" onclick="deleteLastChapter()" style="color:var(--rust); border-color:var(--rust);">
-    ✕ Supprimer dernier chapitre
-  </button>
-  <div id="notion-link-container"></div>
-</div>
-```
-
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-chapter" onclick="nextChapter()">
+        <span>→</span> Écrire le prochain chapitre
+      </button>
+      <button class="btn btn-secondary" id="btn-delete-chapter" onclick="deleteLastChapter()" style="color:var(--rust); border-color:var(--rust);">
+        ✕ Supprimer dernier chapitre
+      </button>
+      <div id="notion-link-container"></div>
+    </div>
   </div>
 
   <!-- Reorganize Panel -->
-
   <div class="panel" id="reorganize-panel" style="display:none;">
     <div class="panel-title">✦ Réorganiser & Insérer</div>
 
-```
-<div style="margin-bottom:1.2rem;">
-  <div class="panel-title" style="font-size:0.85rem; margin-bottom:0.6rem;">↔ Déplacer un chapitre</div>
-  <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
-    <div style="display:flex; align-items:center; gap:0.5rem;">
-      <span style="font-family:'DM Mono',monospace; font-size:0.8rem; color:var(--mist);">Chapitre</span>
-      <input type="number" id="move-from" min="1" style="width:70px;" placeholder="ex: 3"/>
+    <div style="margin-bottom:1.2rem;">
+      <div class="panel-title" style="font-size:0.85rem; margin-bottom:0.6rem;">↔ Déplacer un chapitre</div>
+      <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-family:'DM Mono',monospace; font-size:0.8rem; color:var(--mist);">Chapitre</span>
+          <input type="number" id="move-from" min="1" style="width:70px;" placeholder="ex: 3"/>
+        </div>
+        <span style="color:var(--gold);">→</span>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-family:'DM Mono',monospace; font-size:0.8rem; color:var(--mist);">devient le</span>
+          <input type="number" id="move-to" min="1" style="width:70px;" placeholder="ex: 1"/>
+        </div>
+        <button class="btn btn-secondary" onclick="reorderChapter()">↔ Déplacer</button>
+      </div>
     </div>
-    <span style="color:var(--gold);">→</span>
-    <div style="display:flex; align-items:center; gap:0.5rem;">
-      <span style="font-family:'DM Mono',monospace; font-size:0.8rem; color:var(--mist);">devient le</span>
-      <input type="number" id="move-to" min="1" style="width:70px;" placeholder="ex: 1"/>
+
+    <div style="border-top:1px solid rgba(201,146,42,0.2); padding-top:1.2rem;">
+      <div class="panel-title" style="font-size:0.85rem; margin-bottom:0.6rem;">+ Insérer un chapitre entre deux existants</div>
+      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem; flex-wrap:wrap;">
+        <span style="font-family:'DM Mono',monospace; font-size:0.8rem; color:var(--mist);">Insérer après le chapitre</span>
+        <input type="number" id="insert-after" min="1" style="width:70px;" placeholder="ex: 2"/>
+      </div>
+      <input type="text" id="insert-brief" placeholder="Brief pour le chapitre à insérer (optionnel — l'agent s'en charge automatiquement)…" style="margin-bottom:0.75rem;"/>
+      <button class="btn btn-primary" onclick="insertChapter()">+ Insérer un chapitre</button>
     </div>
-    <button class="btn btn-secondary" onclick="reorderChapter()">↔ Déplacer</button>
-  </div>
-</div>
-
-<div style="border-top:1px solid rgba(201,146,42,0.2); padding-top:1.2rem;">
-  <div class="panel-title" style="font-size:0.85rem; margin-bottom:0.6rem;">+ Insérer un chapitre entre deux existants</div>
-  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem; flex-wrap:wrap;">
-    <span style="font-family:'DM Mono',monospace; font-size:0.8rem; color:var(--mist);">Insérer après le chapitre</span>
-    <input type="number" id="insert-after" min="1" style="width:70px;" placeholder="ex: 2"/>
-  </div>
-  <input type="text" id="insert-brief" placeholder="Brief pour le chapitre à insérer (optionnel — l'agent s'en charge automatiquement)…" style="margin-bottom:0.75rem;"/>
-  <button class="btn btn-primary" onclick="insertChapter()">+ Insérer un chapitre</button>
-</div>
-```
-
   </div>
 
   <!-- Activity Log -->
-
   <div class="panel">
     <div class="panel-title">✦ Activité
       <span id="status-dot" class="status-dot"></span>
@@ -816,6 +797,5 @@ animation: fadeSlide 0.3s ease;
     document.getElementById('chapter-corrections').value = '';
   }
 </script>
-
 </body>
 </html>

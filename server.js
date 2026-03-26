@@ -789,6 +789,23 @@ Réponds UNIQUEMENT en JSON valide, sans markdown, sans backticks :
   }
 });
 
+app.post("/api/sync-chapters/:sessionId", async (req, res) => {
+  const { sessionId } = req.params;
+  const session = await loadSession(sessionId);
+  if (!session || !session.chaptersDbId)
+    return res.json({ success: false, error: "Session ou base chapitres introuvable" });
+
+  try {
+    const dbContent = await notionRequest(`/databases/${session.chaptersDbId}/query`, "POST", {});
+    const count = (dbContent.results || []).length;
+    session.chapterCount = count + 1;
+    await saveSession(sessionId, session);
+    res.json({ success: true, chapterCount: count });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 app.get("/api/chapters/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
   const session = await loadSession(sessionId);

@@ -48,6 +48,25 @@ async function listSessions() {
     .toArray();
 }
 
+// ── Verrou MongoDB anti-doublon ───────────────────────────────────
+// Pose un verrou atomique sur la session pendant l'écriture d'un chapitre.
+// Retourne true si le verrou a été acquis, false si déjà verrouillé.
+async function acquireChapterLock(sessionId) {
+  const result = await sessionsCollection.findOneAndUpdate(
+    { sessionId, writingChapter: { $ne: true } },
+    { $set: { writingChapter: true, writingChapterSince: new Date() } },
+    { returnDocument: "after" }
+  );
+  return result !== null;
+}
+
+async function releaseChapterLock(sessionId) {
+  await sessionsCollection.updateOne(
+    { sessionId },
+    { $unset: { writingChapter: "", writingChapterSince: "" } }
+  );
+}
+
 // ── Notion API helpers ────────────────────────────────────────────
 
 async function notionRequest(endpoint, method = "GET", body = null) {
@@ -412,9 +431,7 @@ const tools = [
 
 // ── Agent Loop ───────────────────────────────────────────────────
 
-async function runAgent(messages, onEvent) {
-  // Fenêtre glissante — recalculée à chaque tour de boucle
-  // Ne jamais couper une paire tool_use / tool_result
+async function runAgent(messages, onEvent, sessionId = null) {
   function trimHistory(msgs, keep = 20) {
     if (msgs.length <= keep + 1) return msgs;
     const first = msgs[0];
@@ -431,7 +448,7 @@ async function runAgent(messages, onEvent) {
     return [first, ...candidates];
   }
 
-  // Flag anti-doublon : un seul create_chapter_page par appel runAgent
+  // Flag mémoire (protection intra-process)
   let chapterCreatedThisRun = false;
 
   const systemPrompt = `Tu es un agent créatif spécialisé dans l'écriture de romans détaillés. 
@@ -463,7 +480,6 @@ RÈGLES DE STYLE :
 Tu dois TOUJOURS appeler les outils Notion, ne jamais juste afficher le texte sans le sauvegarder.`;
 
   while (true) {
-    // Recalcul à chaque tour pour intégrer les nouveaux messages
     const trimmedMessages = trimHistory(messages, 20);
 
     const response = await anthropic.messages.create({
@@ -491,20 +507,26 @@ Tu dois TOUJOURS appeler les outils Notion, ne jamais juste afficher le texte sa
 
       for (const toolUse of toolUseBlocks) {
 
-        // Bloquer tout deuxième appel à create_chapter_page dans la même exécution
-        if (toolUse.name === "create_chapter_page" && chapterCreatedThisRun) {
-          console.warn("⚠️ Doublon create_chapter_page bloqué");
-          const blockedResult = {
-            success: false,
-            error: "Ce chapitre a déjà été créé. Ne pas appeler create_chapter_page une deuxième fois.",
-          };
-          onEvent({ type: "tool_error", name: toolUse.name, error: blockedResult.error });
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: toolUse.id,
-            content: JSON.stringify(blockedResult),
-          });
-          continue;
+        // Double protection anti-doublon : flag mémoire + verrou MongoDB
+        if (toolUse.name === "create_chapter_page") {
+          if (chapterCreatedThisRun) {
+            console.warn("⚠️ Doublon create_chapter_page bloqué (flag mémoire)");
+            const blockedResult = { success: false, error: "Chapitre déjà créé dans cette session. Ne pas appeler create_chapter_page une deuxième fois." };
+            onEvent({ type: "tool_error", name: toolUse.name, error: blockedResult.error });
+            toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: JSON.stringify(blockedResult) });
+            continue;
+          }
+          // Verrou MongoDB si on a un sessionId
+          if (sessionId) {
+            const locked = await acquireChapterLock(sessionId);
+            if (!locked) {
+              console.warn("⚠️ Doublon create_chapter_page bloqué (verrou MongoDB)");
+              const blockedResult = { success: false, error: "Un chapitre est déjà en cours de création pour cette session." };
+              onEvent({ type: "tool_error", name: toolUse.name, error: blockedResult.error });
+              toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: JSON.stringify(blockedResult) });
+              continue;
+            }
+          }
         }
 
         onEvent({ type: "tool", name: toolUse.name, input: toolUse.input });
@@ -515,13 +537,19 @@ Tu dois TOUJOURS appeler les outils Notion, ne jamais juste afficher le texte sa
             result = await setupStoryStructure(toolUse.input);
           } else if (toolUse.name === "create_chapter_page") {
             result = await createChapterPage(toolUse.input);
-            if (result.success) chapterCreatedThisRun = true;
+            if (result.success) {
+              chapterCreatedThisRun = true;
+              // Le verrou sera libéré en fin de runAgent
+            }
           } else if (toolUse.name === "add_character") {
             result = await addCharacter(toolUse.input);
           }
           onEvent({ type: "tool_result", name: toolUse.name, result });
         } catch (err) {
           result = { success: false, error: err.message };
+          if (toolUse.name === "create_chapter_page" && sessionId) {
+            await releaseChapterLock(sessionId);
+          }
           onEvent({ type: "tool_error", name: toolUse.name, error: err.message });
         }
 
@@ -536,6 +564,9 @@ Tu dois TOUJOURS appeler les outils Notion, ne jamais juste afficher le texte sa
       messages.push({ role: "user", content: toolResults });
     }
   }
+
+  // Libérer le verrou en fin d'exécution
+  if (sessionId) await releaseChapterLock(sessionId);
 }
 
 // ── API Routes ───────────────────────────────────────────────────
@@ -612,11 +643,12 @@ Commence par créer la structure Notion, ajoute les personnages principaux, puis
         sessionData.chapterCount++;
         await saveSession(sessionId, sessionData);
       }
-    });
+    }, sessionId);
     sessionData.messages = messages;
     await saveSession(sessionId, sessionData);
     send({ type: "session", sessionId });
   } catch (err) {
+    await releaseChapterLock(sessionId);
     send({ type: "error", message: err.message });
   }
 
@@ -629,6 +661,18 @@ app.post("/api/chapter", async (req, res) => {
 
   if (!session) {
     return res.status(404).json({ error: "Session introuvable" });
+  }
+
+  // Refus immédiat si un chapitre est déjà en cours d'écriture
+  if (session.writingChapter) {
+    const since = session.writingChapterSince ? new Date(session.writingChapterSince) : null;
+    const ageMinutes = since ? (Date.now() - since.getTime()) / 60000 : 0;
+    // Verrou expiré après 10 minutes (sécurité si le serveur a crashé)
+    if (ageMinutes < 10) {
+      return res.status(409).json({ error: "Un chapitre est déjà en cours de génération. Patiente quelques instants." });
+    }
+    // Verrou expiré — on le libère et on continue
+    await releaseChapterLock(sessionId);
   }
 
   let notionContext = "";
@@ -656,9 +700,7 @@ app.post("/api/chapter", async (req, res) => {
   }
 
   const chapterNum = session.chapterCount;
-  const correctionsNote = corrections
-    ? `\n\nINSTRUCTIONS DE CORRECTION : ${corrections}`
-    : "";
+  const correctionsNote = corrections ? `\n\nINSTRUCTIONS DE CORRECTION : ${corrections}` : "";
 
   const userMessage = existingChapterUrl
     ? `Écris le Chapitre ${chapterNum} en continuant directement après le chapitre existant fourni.${correctionsNote}${existingChapterContext}${notionContext}`
@@ -681,9 +723,10 @@ app.post("/api/chapter", async (req, res) => {
         session.chapterCount++;
         await saveSession(sessionId, session);
       }
-    });
+    }, sessionId);
     await saveSession(sessionId, session);
   } catch (err) {
+    await releaseChapterLock(sessionId);
     send({ type: "error", message: err.message });
   }
 
@@ -744,9 +787,10 @@ app.post("/api/delete-last-chapter", async (req, res) => {
         session.chapterCount++;
         await saveSession(sessionId, session);
       }
-    });
+    }, sessionId);
     await saveSession(sessionId, session);
   } catch (err) {
+    await releaseChapterLock(sessionId);
     send({ type: "error", message: err.message });
   }
 
@@ -953,10 +997,11 @@ Le nouveau chapitre doit faire le lien naturel entre ces deux chapitres.` : ''}`
         session.chapterCount++;
         await saveSession(sessionId, session);
       }
-    });
+    }, sessionId);
 
     await saveSession(sessionId, session);
   } catch (err) {
+    await releaseChapterLock(sessionId);
     send({ type: "error", message: err.message });
   }
 

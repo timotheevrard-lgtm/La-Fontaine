@@ -413,10 +413,26 @@ const tools = [
 // ── Agent Loop ───────────────────────────────────────────────────
 
 async function runAgent(messages, onEvent) {
-  // Fenêtre glissante — garde le 1er message + les 20 derniers pour rester sous 200k tokens
-  const trimmedMessages = messages.length > 21
-    ? [messages[0], ...messages.slice(-20)]
-    : messages;
+  // Fenêtre glissante — garde le 1er message + les derniers messages
+  // en s'assurant de ne jamais couper une paire tool_use / tool_result
+  function trimHistory(msgs, keep = 20) {
+    if (msgs.length <= keep + 1) return msgs;
+    const first = msgs[0];
+    let candidates = msgs.slice(-keep);
+    // Si le premier message retenu est un tool_result, on remonte
+    // jusqu'à trouver son tool_use pour ne pas casser la paire
+    while (candidates.length > 0) {
+      const firstCandidate = candidates[0];
+      const content = firstCandidate.content;
+      const hasToolResult = Array.isArray(content)
+        ? content.some(b => b.type === "tool_result")
+        : false;
+      if (!hasToolResult) break;
+      candidates = candidates.slice(1);
+    }
+    return [first, ...candidates];
+  }
+  const trimmedMessages = trimHistory(messages, 20);
 
   const systemPrompt = `Tu es un agent créatif spécialisé dans l'écriture de romans détaillés. 
 Tu génères des histoires riches, immersives et bien développées, puis tu les structures automatiquement dans Notion.

@@ -380,7 +380,7 @@ const tools = [
   },
   {
     name: "create_chapter_page",
-    description: "Rédige un chapitre complet et le crée dans Notion.",
+    description: "Rédige un chapitre complet et le crée dans Notion. NE PAS appeler plus d'une fois par session — un seul chapitre par appel.",
     input_schema: {
       type: "object",
       properties: {
@@ -413,14 +413,12 @@ const tools = [
 // ── Agent Loop ───────────────────────────────────────────────────
 
 async function runAgent(messages, onEvent) {
-  // Fenêtre glissante — garde le 1er message + les derniers messages
-  // en s'assurant de ne jamais couper une paire tool_use / tool_result
+  // Fenêtre glissante — recalculée à chaque tour de boucle
+  // Ne jamais couper une paire tool_use / tool_result
   function trimHistory(msgs, keep = 20) {
     if (msgs.length <= keep + 1) return msgs;
     const first = msgs[0];
     let candidates = msgs.slice(-keep);
-    // Si le premier message retenu est un tool_result, on remonte
-    // jusqu'à trouver son tool_use pour ne pas casser la paire
     while (candidates.length > 0) {
       const firstCandidate = candidates[0];
       const content = firstCandidate.content;
@@ -432,7 +430,9 @@ async function runAgent(messages, onEvent) {
     }
     return [first, ...candidates];
   }
-  const trimmedMessages = trimHistory(messages, 20);
+
+  // Flag anti-doublon : un seul create_chapter_page par appel runAgent
+  let chapterCreatedThisRun = false;
 
   const systemPrompt = `Tu es un agent créatif spécialisé dans l'écriture de romans détaillés. 
 Tu génères des histoires riches, immersives et bien développées, puis tu les structures automatiquement dans Notion.
@@ -441,37 +441,31 @@ RÈGLE ABSOLUE SUR LES PERSONNAGES ET LEURS POUVOIRS :
 - Chaque personnage a un pouvoir UNIQUE et FIXE défini dans sa fiche — ne jamais l'inventer, le modifier ou l'attribuer à un autre personnage
 - Les pouvoirs de départ sont : Sesno = perception énergétique, Kalo = télépathie courte portée, Caën = densification osseuse, Rho = manipulation des fréquences sonores, Mira = vision thermique
 - Les pouvoirs ne peuvent JAMAIS évoluer ou changer sans instruction explicite de l'utilisateur dans le brief du chapitre
-- SEUL l'utilisateur peut faire évoluer un pouvoir, UNIQUEMENT via le brief — si le brief mentionne "Sesno découvre qu'il peut...", alors et SEULEMENT alors tu peux faire évoluer ce pouvoir
+- SEUL l'utilisateur peut faire évoluer un pouvoir, UNIQUEMENT via le brief
 - Ne JAMAIS inventer un nouveau pouvoir pour un personnage existant
-- Pour chaque personnage qui apparaît, vérifie sa fiche avant de lui attribuer quoi que ce soit
 
 RÈGLES IMPORTANTES :
 - Chaque chapitre doit être LONG et DÉTAILLÉ (minimum 1200-1500 mots), avec des dialogues, descriptions d'ambiance, pensées des personnages
-- Pour les personnages PRINCIPAUX et SECONDAIRES : décris leur physique (visage, corpulence, façon de se mouvoir, vêtements, cicatrices), leur psychologie et leurs contradictions internes
-- Pour les figurants : une touche descriptive suffit, pas besoin d'aller dans le détail
-- Plante le contexte de l'époque naturellement, à travers des détails du quotidien et des dialogues, sans faire de longues digressions historiques
+- Pour les personnages PRINCIPAUX et SECONDAIRES : décris leur physique, leur psychologie et leurs contradictions internes
 - Décris les lieux en détail AVANT d'y faire entrer les personnages : ambiance, sons, odeurs, lumières, température
-- Chaque première apparition d'un personnage dans un chapitre doit inclure une description physique même si le personnage est connu
+- Chaque première apparition d'un personnage dans un chapitre doit inclure une description physique
 - Utilise des dialogues riches et révélateurs de caractère
-- Chaque chapitre doit faire avancer l'intrigue ET approfondir l'univers
-- Ne jamais précipiter les événements clés — un accident, une révélation, une rencontre importante doit être précédée d'une montée en tension progressive
-- Un chapitre ne doit pas couvrir plus de 2-3 événements majeurs — privilégie la profondeur à la vitesse
-- Utilise setup_story_structure EN PREMIER si c'est une nouvelle histoire
-- Ajoute les personnages principaux avec add_character avant ou après le premier chapitre
-- Pour chaque chapitre, utilise create_chapter_page avec un contenu très développé
+- Ne jamais précipiter les événements clés
+- Un chapitre ne doit pas couvrir plus de 2-3 événements majeurs
+- Pour chaque chapitre, utilise create_chapter_page UNE SEULE FOIS — ne jamais l'appeler deux fois
 - Garde la cohérence narrative entre les chapitres
-- Si l'utilisateur donne un brief, respecte-le mais enrichis-le
-- Si l'utilisateur dit "chapitre suivant" sans brief, continue logiquement l'histoire
 
-RÈGLES DE NUANCE ET DE STYLE :
-- Ne JAMAIS répéter la même formulation pour exprimer une idée — trouve toujours un angle différent
-- Les thèmes récurrents doivent être exprimés de façon INDIRECTE : à travers une action, un regard, un détail du décor, un souvenir, une ironie — jamais énoncés directement deux fois de suite
-- Montre plutôt que tu ne dis : au lieu d'énoncer un trait de caractère, montre-le à travers le comportement
-- Varie les points de vue narratifs : alterne entre pensées intérieures, dialogue, description externe
+RÈGLES DE STYLE :
+- Ne JAMAIS répéter la même formulation pour exprimer une idée
+- Montre plutôt que tu ne dis
+- Varie les points de vue narratifs
 
 Tu dois TOUJOURS appeler les outils Notion, ne jamais juste afficher le texte sans le sauvegarder.`;
 
   while (true) {
+    // Recalcul à chaque tour pour intégrer les nouveaux messages
+    const trimmedMessages = trimHistory(messages, 20);
+
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 8000,
@@ -496,6 +490,23 @@ Tu dois TOUJOURS appeler les outils Notion, ne jamais juste afficher le texte sa
       const toolResults = [];
 
       for (const toolUse of toolUseBlocks) {
+
+        // Bloquer tout deuxième appel à create_chapter_page dans la même exécution
+        if (toolUse.name === "create_chapter_page" && chapterCreatedThisRun) {
+          console.warn("⚠️ Doublon create_chapter_page bloqué");
+          const blockedResult = {
+            success: false,
+            error: "Ce chapitre a déjà été créé. Ne pas appeler create_chapter_page une deuxième fois.",
+          };
+          onEvent({ type: "tool_error", name: toolUse.name, error: blockedResult.error });
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: toolUse.id,
+            content: JSON.stringify(blockedResult),
+          });
+          continue;
+        }
+
         onEvent({ type: "tool", name: toolUse.name, input: toolUse.input });
 
         let result;
@@ -504,6 +515,7 @@ Tu dois TOUJOURS appeler les outils Notion, ne jamais juste afficher le texte sa
             result = await setupStoryStructure(toolUse.input);
           } else if (toolUse.name === "create_chapter_page") {
             result = await createChapterPage(toolUse.input);
+            if (result.success) chapterCreatedThisRun = true;
           } else if (toolUse.name === "add_character") {
             result = await addCharacter(toolUse.input);
           }
@@ -596,7 +608,7 @@ Commence par créer la structure Notion, ajoute les personnages principaux, puis
         sessionData.chaptersDbId = event.result?.chaptersDbId;
         await saveSession(sessionId, sessionData);
       }
-      if (event.type === "tool_result" && event.name === "create_chapter_page") {
+      if (event.type === "tool_result" && event.name === "create_chapter_page" && event.result?.success) {
         sessionData.chapterCount++;
         await saveSession(sessionId, sessionData);
       }
@@ -624,7 +636,7 @@ app.post("/api/chapter", async (req, res) => {
     try {
       const chapters = await readChaptersFromNotion(session.chaptersDbId);
       if (chapters.length > 0) {
-        notionContext = `\n\nVoici la version ACTUELLE des chapitres dans Notion (potentiellement modifiée par l'utilisateur) :\n` +
+        notionContext = `\n\nVoici la version ACTUELLE des chapitres dans Notion :\n` +
           chapters.map(c => `--- Chapitre ${c.num} : "${c.title}" ---\nRésumé : ${c.summary}\nExtrait : ${c.content.slice(0, 1500)}`).join("\n\n");
       }
     } catch (e) {
@@ -637,7 +649,7 @@ app.post("/api/chapter", async (req, res) => {
     try {
       const pageId = extractNotionId(existingChapterUrl);
       const chapterContent = await readBlockContent(pageId);
-      existingChapterContext = `\n\nL'utilisateur a écrit ou fourni le chapitre suivant — continue l'histoire EN PARTANT de ce chapitre, en respectant exactement son contenu, son style et ses événements :\n\n${chapterContent.slice(0, 8000)}`;
+      existingChapterContext = `\n\nL'utilisateur a écrit ou fourni le chapitre suivant — continue l'histoire EN PARTANT de ce chapitre :\n\n${chapterContent.slice(0, 8000)}`;
     } catch (e) {
       console.log("Impossible de lire le chapitre existant:", e.message);
     }
@@ -645,14 +657,14 @@ app.post("/api/chapter", async (req, res) => {
 
   const chapterNum = session.chapterCount;
   const correctionsNote = corrections
-    ? `\n\nINSTRUCTIONS DE CORRECTION À RESPECTER POUR LA SUITE : ${corrections}`
+    ? `\n\nINSTRUCTIONS DE CORRECTION : ${corrections}`
     : "";
 
   const userMessage = existingChapterUrl
     ? `Écris le Chapitre ${chapterNum} en continuant directement après le chapitre existant fourni.${correctionsNote}${existingChapterContext}${notionContext}`
     : brief
     ? `Écris le Chapitre ${chapterNum} avec ce brief : ${brief}. Développe-le en détail.${correctionsNote}${notionContext}`
-    : `Continue l'histoire et écris le Chapitre ${chapterNum} en suivant logiquement les événements précédents. Sois très détaillé.${correctionsNote}${notionContext}`;
+    : `Continue l'histoire et écris le Chapitre ${chapterNum} en suivant logiquement les événements précédents.${correctionsNote}${notionContext}`;
 
   session.messages.push({ role: "user", content: userMessage });
 
@@ -665,7 +677,7 @@ app.post("/api/chapter", async (req, res) => {
   try {
     await runAgent(session.messages, async (event) => {
       send(event);
-      if (event.type === "tool_result" && event.name === "create_chapter_page") {
+      if (event.type === "tool_result" && event.name === "create_chapter_page" && event.result?.success) {
         session.chapterCount++;
         await saveSession(sessionId, session);
       }
@@ -709,9 +721,7 @@ app.post("/api/delete-last-chapter", async (req, res) => {
       }
     }
 
-    if (session.chapterCount > 1) {
-      session.chapterCount--;
-    }
+    if (session.chapterCount > 1) session.chapterCount--;
 
     const lastToolResultIdx = session.messages.map(m => m.role).lastIndexOf('user');
     if (lastToolResultIdx > 0) {
@@ -730,7 +740,7 @@ app.post("/api/delete-last-chapter", async (req, res) => {
 
     await runAgent(session.messages, async (event) => {
       send(event);
-      if (event.type === "tool_result" && event.name === "create_chapter_page") {
+      if (event.type === "tool_result" && event.name === "create_chapter_page" && event.result?.success) {
         session.chapterCount++;
         await saveSession(sessionId, session);
       }
@@ -857,7 +867,6 @@ app.post("/api/reorder-chapter", async (req, res) => {
 
     const pages = dbContent.results || [];
     const fromPage = pages.find(p => p.properties?.Numéro?.number === from);
-
     if (!fromPage) return res.json({ success: false, error: `Chapitre ${from} introuvable` });
 
     const direction = from < to ? 1 : -1;
@@ -940,7 +949,7 @@ Le nouveau chapitre doit faire le lien naturel entre ces deux chapitres.` : ''}`
 
     await runAgent(insertMessages, async (event) => {
       send(event);
-      if (event.type === "tool_result" && event.name === "create_chapter_page") {
+      if (event.type === "tool_result" && event.name === "create_chapter_page" && event.result?.success) {
         session.chapterCount++;
         await saveSession(sessionId, session);
       }

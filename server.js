@@ -231,9 +231,7 @@ async function addCharacter({ charactersDbId, name, role, description, traits })
 }
 
 function extractNotionId(url) {
-  // Handle direct UUIDs
   if (/^[a-f0-9]{32}$/.test(url)) return url;
-  // Handle URLs like https://www.notion.so/Title-32chars or with ?v= params
   const match = url.match(/([a-f0-9]{32})/);
   return match ? match[1] : null;
 }
@@ -293,7 +291,6 @@ async function readNotionPageContent(pageId) {
         const dbTitle = block.child_database?.title || "Base de données";
         content += `## ${dbTitle}\n\n`;
 
-        // Get all characters and filter by "Actif" checkbox in JS
         const dbContent = await notionRequest(`/databases/${block.id}/query`, "POST", {});
 
         const activeItems = (dbContent.results || []).filter(item => {
@@ -309,7 +306,6 @@ async function readNotionPageContent(pageId) {
 
           content += `### ${name}\n`;
 
-          // Read basic properties
           for (const [key, prop] of Object.entries(item.properties)) {
             if (key === "Actif") continue;
             if (prop.type === "rich_text" && prop.rich_text?.length > 0) {
@@ -322,7 +318,6 @@ async function readNotionPageContent(pageId) {
             }
           }
 
-          // Read the character's subpage content
           const itemBlocks = await notionRequest(`/blocks/${item.id}/children`);
           for (const b of itemBlocks.results || []) {
             if (b.type === "child_page") {
@@ -418,16 +413,12 @@ const tools = [
 // ── Agent Loop ───────────────────────────────────────────────────
 
 async function runAgent(messages, onEvent) {
-  const trimmedMessages = messages.length > 21 ? [messages[0], ...messages.slice(-20)] : messages;
+  // Fenêtre glissante — garde le 1er message + les 20 derniers pour rester sous 200k tokens
+  const trimmedMessages = messages.length > 21
+    ? [messages[0], ...messages.slice(-20)]
+    : messages;
 
-  while (true) {
-    const response = await anthropic.messages.create({
-      model: "claude-opus-4-5",
-      max_tokens: 8000,
-      system: systemPrompt,
-      tools,
-      messages: trimmedMessages,   // ← ici, trimmed au lieu de messages
-    });  const systemPrompt = `Tu es un agent créatif spécialisé dans l'écriture de romans détaillés. 
+  const systemPrompt = `Tu es un agent créatif spécialisé dans l'écriture de romans détaillés. 
 Tu génères des histoires riches, immersives et bien développées, puis tu les structures automatiquement dans Notion.
 
 RÈGLE ABSOLUE SUR LES PERSONNAGES ET LEURS POUVOIRS :
@@ -470,7 +461,7 @@ Tu dois TOUJOURS appeler les outils Notion, ne jamais juste afficher le texte sa
       max_tokens: 8000,
       system: systemPrompt,
       tools,
-      messages,
+      messages: trimmedMessages,
     });
 
     for (const block of response.content) {
@@ -548,7 +539,6 @@ app.post("/api/start", async (req, res) => {
   const { storyBrief, notionPageUrl } = req.body;
   const sessionId = Date.now().toString();
 
-  // Extract Notion page ID from URL if provided
   let notionContext = "";
   if (notionPageUrl) {
     try {
@@ -626,7 +616,6 @@ app.post("/api/chapter", async (req, res) => {
     }
   }
 
-  // Read existing chapter if URL provided
   let existingChapterContext = "";
   if (existingChapterUrl) {
     try {
@@ -688,12 +677,10 @@ app.post("/api/delete-last-chapter", async (req, res) => {
   const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
   try {
-    // Find and delete last chapter in Notion
     if (session.chaptersDbId) {
       const chapters = await readChaptersFromNotion(session.chaptersDbId);
       if (chapters.length > 0) {
         const lastChapter = chapters[chapters.length - 1];
-        // Get the page ID from Notion database
         const dbContent = await notionRequest(`/databases/${session.chaptersDbId}/query`, "POST", {
           sorts: [{ property: "Numéro", direction: "descending" }],
           page_size: 1
@@ -706,12 +693,10 @@ app.post("/api/delete-last-chapter", async (req, res) => {
       }
     }
 
-    // Decrement chapter count
     if (session.chapterCount > 1) {
       session.chapterCount--;
     }
 
-    // Remove last chapter messages from history
     const lastToolResultIdx = session.messages.map(m => m.role).lastIndexOf('user');
     if (lastToolResultIdx > 0) {
       session.messages = session.messages.slice(0, lastToolResultIdx - 1);
@@ -719,7 +704,6 @@ app.post("/api/delete-last-chapter", async (req, res) => {
 
     await saveSession(sessionId, session);
 
-    // Now rewrite the chapter
     const chapterNum = session.chapterCount;
     const correctionsNote = corrections ? `\n\nCORRECTIONS : ${corrections}` : "";
     const userMessage = brief
@@ -747,14 +731,10 @@ app.post("/api/illustrations", async (req, res) => {
   const { chapterUrl, types } = req.body;
 
   try {
-    // Extract page ID from URL
     const pageId = extractNotionId(chapterUrl);
-
-    // Read chapter content
     const chapterContent = await readBlockContent(pageId);
     if (!chapterContent) return res.json({ error: "Impossible de lire le chapitre" });
 
-    // Generate prompts with Claude
     const typeInstructions = [];
     if (types.includes('scenes')) typeInstructions.push("3 scènes clés du chapitre");
     if (types.includes('portraits')) typeInstructions.push("2 portraits de personnages présents dans le chapitre");
@@ -855,25 +835,21 @@ app.post("/api/reorder-chapter", async (req, res) => {
   if (!session) return res.status(404).json({ error: "Session introuvable" });
 
   try {
-    // Get all chapters from Notion
     const dbContent = await notionRequest(`/databases/${session.chaptersDbId}/query`, "POST", {
       sorts: [{ property: "Numéro", direction: "ascending" }]
     });
 
     const pages = dbContent.results || [];
     const fromPage = pages.find(p => p.properties?.Numéro?.number === from);
-    const toPage = pages.find(p => p.properties?.Numéro?.number === to);
 
     if (!fromPage) return res.json({ success: false, error: `Chapitre ${from} introuvable` });
 
-    // Shift chapters between from and to
     const direction = from < to ? 1 : -1;
     const range = pages.filter(p => {
       const num = p.properties?.Numéro?.number;
       return direction > 0 ? num > from && num <= to : num >= to && num < from;
     });
 
-    // Shift affected chapters
     for (const page of range) {
       const currentNum = page.properties?.Numéro?.number;
       await notionRequest(`/pages/${page.id}`, "PATCH", {
@@ -881,7 +857,6 @@ app.post("/api/reorder-chapter", async (req, res) => {
       });
     }
 
-    // Move the target chapter
     await notionRequest(`/pages/${fromPage.id}`, "PATCH", {
       properties: { Numéro: { number: to } }
     });
@@ -904,7 +879,6 @@ app.post("/api/insert-chapter", async (req, res) => {
   const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
   try {
-    // Read chapters to get context
     const chapters = await readChaptersFromNotion(session.chaptersDbId);
     const chapterBefore = chapters.find(c => c.num === afterChapter);
     const chapterAfter = chapters.find(c => c.num === afterChapter + 1);
@@ -914,7 +888,6 @@ app.post("/api/insert-chapter", async (req, res) => {
       return res.end();
     }
 
-    // Shift all chapters after insertion point
     const dbContent = await notionRequest(`/databases/${session.chaptersDbId}/query`, "POST", {
       sorts: [{ property: "Numéro", direction: "descending" }]
     });
@@ -930,7 +903,6 @@ app.post("/api/insert-chapter", async (req, res) => {
 
     send({ type: "text", text: `Chapitres renumérotés. Écriture du chapitre ${afterChapter + 1}…` });
 
-    // Build context for the new chapter
     const insertContext = `
 Tu dois écrire un chapitre qui s'insère ENTRE deux chapitres existants.
 
@@ -948,7 +920,6 @@ Le nouveau chapitre doit faire le lien naturel entre ces deux chapitres.` : ''}`
       ? `Écris le Chapitre ${afterChapter + 1} avec ce brief : ${brief}. Il doit s'insérer naturellement entre les chapitres ${afterChapter} et ${afterChapter + 2}.${insertContext}`
       : `Écris le Chapitre ${afterChapter + 1} qui s'insère naturellement entre les chapitres ${afterChapter} et ${afterChapter + 2}.${insertContext}`;
 
-    // Use existing session messages for context
     const insertMessages = [...session.messages, { role: "user", content: userMessage }];
 
     await runAgent(insertMessages, async (event) => {

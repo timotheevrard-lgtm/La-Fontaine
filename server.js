@@ -418,10 +418,7 @@ const tools = [
 // ── Agent Loop ───────────────────────────────────────────────────
 
 async function runAgent(messages, onEvent) {
-  // ── Fenêtre glissante — garde le 1er message + les 20 derniers ──
-  const trimmed = messages.length > 21
-    ? [messages[0], ...messages.slice(-20)]
-    : messages;
+  const trimmedMessages = messages.length > 21 ? [messages[0], ...messages.slice(-20)] : messages;
 
   while (true) {
     const response = await anthropic.messages.create({
@@ -429,7 +426,7 @@ async function runAgent(messages, onEvent) {
       max_tokens: 8000,
       system: systemPrompt,
       tools,
-      messages: trimmed,   // ← ici, trimmed au lieu de messages
+      messages: trimmedMessages,   // ← ici, trimmed au lieu de messages
     });  const systemPrompt = `Tu es un agent créatif spécialisé dans l'écriture de romans détaillés. 
 Tu génères des histoires riches, immersives et bien développées, puis tu les structures automatiquement dans Notion.
 
